@@ -34,14 +34,13 @@
 
 .floating-card ul {
   list-style-type: none;
-  padding: 0;
+  padding: 0 10px 0 5px; /* Reduced left padding */
   overflow-y: auto;
   max-height: calc(100% - 50px); /* Adjust for header and padding */
 }
 
 .floating-card li {
   margin-bottom: 10px;
-  padding: 10px;
   cursor: pointer;
   border-bottom: 1px solid #ddd; /* Add border between rows */
   width: 100%; /* Ensure full width of card */
@@ -51,9 +50,36 @@
   border-bottom: none; /* Remove border from the last item */
 }
 
-.floating-card li:hover {
+.floating-card li:hover .activity-header {
   background-color: #fc4c02; /* Strava Orange */
   color: white;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 5px; /* Reduced left padding */
+  font-size: 1.2em; /* Increase font size */
+  font-weight: bold; /* Increase font weight */
+}
+
+.activity-header .caret {
+  cursor: pointer;
+}
+
+.activity-details {
+  padding: 10px; /* Add padding to the accordion content */
+}
+
+.activity-details ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0; /* Remove margin */
+}
+
+.activity-details li {
+  margin-bottom: 5px; /* Add some spacing between items */
 }
 
 .floating-card button {

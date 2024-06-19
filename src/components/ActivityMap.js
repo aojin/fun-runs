@@ -14,6 +14,7 @@ const ActivityMap = ({ center, activities }) => {
   const scrollTimeout = useRef(null)
   const [visibleActivities, setVisibleActivities] = useState([])
   const [displayCount, setDisplayCount] = useState(30)
+  const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
 
   useEffect(() => {
     if (center && !map.current) {
@@ -127,6 +128,10 @@ const ActivityMap = ({ center, activities }) => {
     }
   }
 
+  const handleAccordionToggle = index => {
+    setOpenAccordionIndex(prevIndex => (prevIndex === index ? null : index))
+  }
+
   useEffect(() => {
     addActivityLayers()
   }, [activities, addActivityLayers])
@@ -165,15 +170,39 @@ const ActivityMap = ({ center, activities }) => {
   return (
     <div className="map-container" ref={mapContainerRef}>
       <div className="floating-card">
-        <h3>Visible Activities</h3>
+        <h3>Visible Activities ({visibleActivities.length})</h3>
         <ul>
           {visibleActivities.slice(0, displayCount).map((activity, index) => (
-            <li
-              key={index}
-              className="activity-row"
-              onClick={() => handleActivityClick(activity.coordinates)}
-            >
-              {activity.name} - {new Date(activity.date).toLocaleDateString()}
+            <li key={index} className="activity-row">
+              <div className="activity-header">
+                <span onClick={() => handleActivityClick(activity.coordinates)}>
+                  {activity.name} -{" "}
+                  {new Date(activity.date).toLocaleDateString()}
+                </span>
+                <span
+                  className="caret"
+                  onClick={() => handleAccordionToggle(index)}
+                >
+                  {openAccordionIndex === index ? "▼" : "►"}
+                </span>
+              </div>
+              {openAccordionIndex === index && (
+                <div className="activity-details">
+                  <ul>
+                    <li>Type: {activity.type}</li>
+                    <li>Distance: {activity.distance} km</li>
+                    <li>Moving Time: {activity.movingTime} mins</li>
+                    <li>Elapsed Time: {activity.elapsedTime} mins</li>
+                    <li>Elevation Gain: {activity.totalElevationGain} m</li>
+                    <li>City: {activity.city}</li>
+                    <li>State: {activity.state}</li>
+                    <li>Country: {activity.country}</li>
+                    <li>
+                      Date: {new Date(activity.date).toLocaleDateString()}
+                    </li>
+                  </ul>
+                </div>
+              )}
             </li>
           ))}
         </ul>
