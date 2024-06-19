@@ -1,0 +1,38 @@
+/* src/components/ActivityMap.css */
+
+.modal {
+  position: absolute;
+  z-index: 1000;
+  top: 20px; /* Adjust as needed */
+  left: 20px; /* Adjust as needed */
+  max-width: 300px;
+  padding: 20px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.modal-content {
+  margin-top: 10px;
+}
+
+.close-button {
+  background-color: #fc4c02; /* Strava Orange */
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.close-button:hover {
+  background-color: #d84302; /* Darker Strava Orange */
+}
+
+.toggle-container {
+  margin-top: 10px;
+}
+
+.toggle-container label {
+  margin-right: 10px;
+}

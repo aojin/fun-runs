@@ -1,128 +1,94 @@
-import * as React from "react"
-import { Link } from "gatsby"
-import { StaticImage } from "gatsby-plugin-image"
+// src/pages/index.js
 
+import React, { useEffect, useState } from "react"
+import ActivityDashboard from "../components/ActivityDashboard"
+import StravaAuth from "../components/StravaAuth"
 import Layout from "../components/layout"
-import Seo from "../components/seo"
-import * as styles from "../components/index.module.css"
+import axios from "axios"
+import queryString from "query-string"
+import { navigate } from "gatsby"
+import "../components/index.css" // Import the global styles
 
-const links = [
-  {
-    text: "Tutorial",
-    url: "https://www.gatsbyjs.com/docs/tutorial",
-    description:
-      "A great place to get started if you're new to web development. Designed to guide you through setting up your first Gatsby site.",
-  },
-  {
-    text: "Examples",
-    url: "https://github.com/gatsbyjs/gatsby/tree/master/examples",
-    description:
-      "A collection of websites ranging from very basic to complex/complete that illustrate how to accomplish specific tasks within your Gatsby sites.",
-  },
-  {
-    text: "Plugin Library",
-    url: "https://www.gatsbyjs.com/plugins",
-    description:
-      "Learn how to add functionality and customize your Gatsby site or app with thousands of plugins built by our amazing developer community.",
-  },
-  {
-    text: "Build and Host",
-    url: "https://www.gatsbyjs.com/cloud",
-    description:
-      "Now you’re ready to show the world! Give your Gatsby site superpowers: Build and host on Gatsby Cloud. Get started for free!",
-  },
-]
+const IndexPage = () => {
+  const [accessToken, setAccessToken] = useState(null)
+  const [profile, setProfile] = useState(null)
 
-const samplePageLinks = [
-  {
-    text: "Page 2",
-    url: "page-2",
-    badge: false,
-    description:
-      "A simple example of linking to another page within a Gatsby site",
-  },
-  { text: "TypeScript", url: "using-typescript" },
-  { text: "Server Side Rendering", url: "using-ssr" },
-  { text: "Deferred Static Generation", url: "using-dsg" },
-]
+  const fetchAccessToken = async code => {
+    try {
+      const response = await axios.post("https://www.strava.com/oauth/token", {
+        client_id: process.env.GATSBY_STRAVA_CLIENT_ID,
+        client_secret: process.env.GATSBY_STRAVA_CLIENT_SECRET,
+        code: code,
+        grant_type: "authorization_code",
+      })
+      const token = response.data.access_token
+      setAccessToken(token)
+      localStorage.setItem("strava_access_token", token)
+      fetchUserProfile(token)
+      navigate("/") // Redirect to home page after login
+    } catch (error) {
+      console.error(
+        "Error fetching access token:",
+        error.response ? error.response.data : error.message
+      )
+    }
+  }
 
-const moreLinks = [
-  { text: "Join us on Discord", url: "https://gatsby.dev/discord" },
-  {
-    text: "Documentation",
-    url: "https://gatsbyjs.com/docs/",
-  },
-  {
-    text: "Starters",
-    url: "https://gatsbyjs.com/starters/",
-  },
-  {
-    text: "Showcase",
-    url: "https://gatsbyjs.com/showcase/",
-  },
-  {
-    text: "Contributing",
-    url: "https://www.gatsbyjs.com/contributing/",
-  },
-  { text: "Issues", url: "https://github.com/gatsbyjs/gatsby/issues" },
-]
+  const fetchUserProfile = async token => {
+    try {
+      const profileResponse = await axios.get(
+        "https://www.strava.com/api/v3/athlete",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      setProfile(profileResponse.data)
+    } catch (error) {
+      console.error(
+        "Error fetching Strava profile data:",
+        error.response ? error.response.data : error.message
+      )
+    }
+  }
 
-const utmParameters = `?utm_source=starter&utm_medium=start-page&utm_campaign=default-starter`
+  const handleLogin = () => {
+    const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
+    const redirectUri = window.location.origin
+    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}/&approval_prompt=force&scope=read,activity:read_all`
+  }
 
-const IndexPage = () => (
-  <Layout>
-    <div className={styles.textCenter}>
-      <StaticImage
-        src="../images/example.png"
-        loading="eager"
-        width={64}
-        quality={95}
-        formats={["auto", "webp", "avif"]}
-        alt=""
-        style={{ marginBottom: `var(--space-3)` }}
-      />
-      <h1>
-        Welcome to <b>Gatsby!</b>
-      </h1>
-      <p className={styles.intro}>
-        <b>Example pages:</b>{" "}
-        {samplePageLinks.map((link, i) => (
-          <React.Fragment key={link.url}>
-            <Link to={link.url}>{link.text}</Link>
-            {i !== samplePageLinks.length - 1 && <> · </>}
-          </React.Fragment>
-        ))}
-        <br />
-        Edit <code>src/pages/index.js</code> to update this page.
-      </p>
-    </div>
-    <ul className={styles.list}>
-      {links.map(link => (
-        <li key={link.url} className={styles.listItem}>
-          <a
-            className={styles.listItemLink}
-            href={`${link.url}${utmParameters}`}
-          >
-            {link.text} ↗
-          </a>
-          <p className={styles.listItemDescription}>{link.description}</p>
-        </li>
-      ))}
-    </ul>
-    {moreLinks.map((link, i) => (
-      <React.Fragment key={link.url}>
-        <a href={`${link.url}${utmParameters}`}>{link.text}</a>
-        {i !== moreLinks.length - 1 && <> · </>}
-      </React.Fragment>
-    ))}
-  </Layout>
-)
+  const handleLogout = () => {
+    localStorage.removeItem("strava_access_token")
+    setAccessToken(null)
+    setProfile(null)
+  }
 
-/**
- * Head export to define metadata for the page
- *
- * See: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-head/
- */
-export const Head = () => <Seo title="Home" />
+  useEffect(() => {
+    const { code } = queryString.parse(window.location.search)
+    if (code) {
+      fetchAccessToken(code)
+    } else {
+      const token = localStorage.getItem("strava_access_token")
+      if (token) {
+        setAccessToken(token)
+        fetchUserProfile(token)
+      }
+    }
+  }, [])
+
+  return (
+    <Layout>
+      <div className="page-container">
+        <h1>My Strava Trails</h1>
+        <StravaAuth
+          profile={profile}
+          onLogout={handleLogout}
+          onLogin={handleLogin}
+        />
+        {accessToken && <ActivityDashboard accessToken={accessToken} />}
+      </div>
+    </Layout>
+  )
+}
 
 export default IndexPage

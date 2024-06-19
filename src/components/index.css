@@ -1,0 +1,17 @@
+body,
+html {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.page-container {
+  padding: 20px; /* Adjust padding as needed */
+}
+
+.map-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 100px); /* Adjust height as needed */
+  box-sizing: border-box;
+}

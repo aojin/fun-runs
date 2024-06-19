@@ -7,6 +7,11 @@
 /**
  * @type {import('gatsby').GatsbyConfig}
  */
+
+require("dotenv").config({
+  path: `.env`,
+})
+
 module.exports = {
   siteMetadata: {
     title: `Gatsby Default Starter`,
@@ -15,6 +20,7 @@ module.exports = {
     siteUrl: `https://gatsbystarterdefaultsource.gatsbyjs.io/`,
   },
   plugins: [
+    "gatsby-plugin-react-helmet",
     `gatsby-plugin-image`,
     {
       resolve: `gatsby-source-filesystem`,
