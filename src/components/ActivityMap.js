@@ -1,6 +1,6 @@
 // src/components/ActivityMap.js
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState, useCallback } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./ActivityMap.css"
@@ -11,14 +11,9 @@ const ActivityMap = ({ center, activities }) => {
   const mapContainerRef = useRef(null)
   const map = useRef(null)
   const mapLoaded = useRef(false)
-  const modalRef = useRef(null)
   const scrollTimeout = useRef(null)
-
-  const [modalContent, setModalContent] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-  const [isMetric, setIsMetric] = useState(false)
-  const [selectedTrailId, setSelectedTrailId] = useState(null)
-  const [selectedTrailData, setSelectedTrailData] = useState(null)
+  const [visibleActivities, setVisibleActivities] = useState([])
+  const [displayCount, setDisplayCount] = useState(30)
 
   useEffect(() => {
     if (center && !map.current) {
@@ -36,11 +31,14 @@ const ActivityMap = ({ center, activities }) => {
         mapLoaded.current = true
         map.current.resize()
         addActivityLayers()
+        updateVisibleActivities()
       })
+
+      map.current.on("moveend", updateVisibleActivities)
     }
   }, [center])
 
-  const addActivityLayers = () => {
+  const addActivityLayers = useCallback(() => {
     if (map.current && activities.length > 0 && mapLoaded.current) {
       activities.forEach((activity, index) => {
         const sourceId = `trail-${index}`
@@ -98,135 +96,46 @@ const ActivityMap = ({ center, activities }) => {
             },
             paint: {
               "line-color": color,
-              "line-width": selectedTrailId === layerId ? 8 : 4,
+              "line-width": 4,
             },
           })
-
-          map.current.on("mouseenter", layerId, e => {
-            if (e.features.length > 0) {
-              const feature = e.features[0]
-              const properties = feature.properties
-
-              setModalContent(
-                <div className="modal-content">
-                  <h3>{properties.name}</h3>
-                  <p>
-                    <strong>Type:</strong> {properties.type}
-                  </p>
-                  <p>
-                    <strong>Distance:</strong>{" "}
-                    {isMetric
-                      ? (properties.distance / 1000).toFixed(2) + " km"
-                      : (properties.distance * 0.000621371).toFixed(2) +
-                        " miles"}
-                  </p>
-                  <p>
-                    <strong>Moving Time:</strong>{" "}
-                    {isMetric
-                      ? (properties.movingTime / 60).toFixed(2) + " min"
-                      : ((properties.movingTime / 60) * 0.621371).toFixed(2) +
-                        " min"}
-                  </p>
-                  <p>
-                    <strong>Elapsed Time:</strong>{" "}
-                    {isMetric
-                      ? (properties.elapsedTime / 60).toFixed(2) + " min"
-                      : ((properties.elapsedTime / 60) * 0.621371).toFixed(2) +
-                        " min"}
-                  </p>
-                  <p>
-                    <strong>Total Elevation Gain:</strong>{" "}
-                    {properties.totalElevationGain} meters
-                  </p>
-                  <p>
-                    <strong>Location:</strong> {properties.city},{" "}
-                    {properties.state}, {properties.country}
-                  </p>
-                  <p>
-                    <strong>Date:</strong> {properties.date}
-                  </p>
-                  <div className="toggle-container">
-                    <label>
-                      <input
-                        type="radio"
-                        value="metric"
-                        checked={isMetric}
-                        onChange={() => setIsMetric(true)}
-                      />{" "}
-                      Metric
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        value="imperial"
-                        checked={!isMetric}
-                        onChange={() => setIsMetric(false)}
-                      />{" "}
-                      Imperial
-                    </label>
-                  </div>
-                </div>
-              )
-              setShowModal(true)
-
-              if (selectedTrailId !== layerId) {
-                if (selectedTrailId) {
-                  map.current.setPaintProperty(selectedTrailId, "line-width", 4)
-                  map.current.setPaintProperty(
-                    selectedTrailId,
-                    "line-color",
-                    selectedTrailData.type === "Trail Run"
-                      ? "#FC4C02"
-                      : selectedTrailData.type === "Skiing"
-                      ? "#0000FF"
-                      : `#${Math.floor(Math.random() * 16777215)
-                          .toString(16)
-                          .padStart(6, "0")}`
-                  )
-                }
-
-                setSelectedTrailId(layerId)
-                setSelectedTrailData(properties)
-                map.current.setPaintProperty(layerId, "line-width", 8)
-                map.current.setPaintProperty(layerId, "line-color", "#FC4C02")
-              }
-            }
-          })
-
-          map.current.on("mouseleave", layerId, () => {})
         }
       })
+    }
+  }, [activities])
+
+  const updateVisibleActivities = useCallback(() => {
+    if (map.current && mapLoaded.current) {
+      const bounds = map.current.getBounds()
+      const visible = activities
+        .filter(activity => {
+          const coordinates = activity.coordinates
+          return coordinates.some(coord => {
+            const [lng, lat] = coord
+            return bounds.contains([lng, lat])
+          })
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+      setVisibleActivities(visible)
+    }
+  }, [activities])
+
+  const handleActivityClick = coordinates => {
+    if (map.current) {
+      const [lng, lat] = coordinates[0]
+      map.current.flyTo({ center: [lng, lat], zoom: 15 })
     }
   }
 
   useEffect(() => {
     addActivityLayers()
-  }, [activities])
+  }, [activities, addActivityLayers])
 
   useEffect(() => {
     if (map.current && center) {
       map.current.flyTo({ center: center, zoom: 15 })
     }
   }, [center])
-
-  const closeModal = () => {
-    setShowModal(false)
-    if (selectedTrailId) {
-      map.current.setPaintProperty(selectedTrailId, "line-width", 4)
-      map.current.setPaintProperty(
-        selectedTrailId,
-        "line-color",
-        selectedTrailData.type === "Trail Run"
-          ? "#FC4C02"
-          : selectedTrailData.type === "Skiing"
-          ? "#0000FF"
-          : `#${Math.floor(Math.random() * 16777215)
-              .toString(16)
-              .padStart(6, "0")}`
-      )
-      setSelectedTrailId(null)
-    }
-  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -249,16 +158,29 @@ const ActivityMap = ({ center, activities }) => {
     }
   }, [])
 
+  const loadMoreActivities = () => {
+    setDisplayCount(prevCount => prevCount + 30)
+  }
+
   return (
     <div className="map-container" ref={mapContainerRef}>
-      {showModal && (
-        <div ref={modalRef} className="modal">
-          <button className="close-button" onClick={closeModal}>
-            Close
-          </button>
-          {modalContent}
-        </div>
-      )}
+      <div className="floating-card">
+        <h3>Visible Activities</h3>
+        <ul>
+          {visibleActivities.slice(0, displayCount).map((activity, index) => (
+            <li
+              key={index}
+              className="activity-row"
+              onClick={() => handleActivityClick(activity.coordinates)}
+            >
+              {activity.name} - {new Date(activity.date).toLocaleDateString()}
+            </li>
+          ))}
+        </ul>
+        {displayCount < visibleActivities.length && (
+          <button onClick={loadMoreActivities}>Load More</button>
+        )}
+      </div>
     </div>
   )
 }
