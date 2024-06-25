@@ -1,3 +1,5 @@
+// src/pages/index.js
+
 import React, { useEffect, useState } from "react"
 import ActivityDashboard from "../components/ActivityDashboard"
 import StravaAuth from "../components/StravaAuth"
@@ -18,6 +20,7 @@ const IndexPage = () => {
         client_secret: process.env.GATSBY_STRAVA_CLIENT_SECRET,
         code: code,
         grant_type: "authorization_code",
+        redirect_uri: `${window.location.origin}/`,
       })
       const token = response.data.access_token
       setAccessToken(token)
@@ -49,10 +52,17 @@ const IndexPage = () => {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogin = () => {
+    const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
+    const redirectUri = `${window.location.origin}/`
+    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&approval_prompt=force&scope=read,activity:read_all`
+  }
+
+  const handleSwitchUser = () => {
     localStorage.removeItem("strava_access_token")
     setAccessToken(null)
     setProfile(null)
+    handleLogin()
   }
 
   useEffect(() => {
@@ -65,7 +75,9 @@ const IndexPage = () => {
         setAccessToken(token)
         fetchUserProfile(token)
       } else {
-        setAccessToken(process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN)
+        const defaultToken = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
+        setAccessToken(defaultToken)
+        fetchUserProfile(defaultToken)
       }
     }
   }, [])
@@ -77,7 +89,7 @@ const IndexPage = () => {
         <StravaAuth
           profile={profile}
           setProfile={setProfile}
-          onLogout={handleLogout}
+          onLogout={handleSwitchUser}
         />
         {accessToken && <ActivityDashboard accessToken={accessToken} />}
       </div>

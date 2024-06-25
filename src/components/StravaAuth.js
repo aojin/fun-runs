@@ -1,7 +1,9 @@
+// src/components/StravaAuth.js
+
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 
-const StravaAuth = ({ profile, setProfile, onLogout }) => {
+const StravaAuth = ({ profile, setProfile }) => {
   const [defaultProfile, setDefaultProfile] = useState(null)
 
   useEffect(() => {
@@ -28,8 +30,8 @@ const StravaAuth = ({ profile, setProfile, onLogout }) => {
 
   const handleLogin = () => {
     const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
-    const redirectUri = window.location.origin
-    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}/&approval_prompt=force&scope=read,activity:read_all`
+    const redirectUri = `${window.location.origin}/`
+    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&approval_prompt=force&scope=read,activity:read_all`
   }
 
   return (
@@ -40,7 +42,7 @@ const StravaAuth = ({ profile, setProfile, onLogout }) => {
             Logged into Strava as {profile.firstname} {profile.lastname}
           </p>
           <p>Membership Type: {profile.premium ? "Premium" : "Free"}</p>
-          <button onClick={onLogout}>Log Out</button>
+          <button onClick={handleLogin}>Switch User</button>
         </div>
       ) : (
         <div>
