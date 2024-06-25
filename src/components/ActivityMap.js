@@ -1,5 +1,3 @@
-// src/components/ActivityMap.js
-
 import React, { useEffect, useRef, useState, useCallback } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -15,6 +13,7 @@ const ActivityMap = ({ center, activities }) => {
   const [visibleActivities, setVisibleActivities] = useState([])
   const [displayCount, setDisplayCount] = useState(30)
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
+  const originalColors = useRef({})
 
   useEffect(() => {
     if (center && !map.current) {
@@ -45,16 +44,12 @@ const ActivityMap = ({ center, activities }) => {
         const sourceId = `trail-${index}`
         const layerId = `trail-${index}`
 
-        let color
-        if (activity.type === "Trail Run") {
-          color = "#FC4C02"
-        } else if (activity.type === "Skiing") {
-          color = "#0000FF"
-        } else {
-          color = `#${Math.floor(Math.random() * 16777215)
-            .toString(16)
-            .padStart(6, "0")}`
-        }
+        const color = `#${Math.floor(Math.random() * 16777215)
+          .toString(16)
+          .padStart(6, "0")}`
+
+        // Store the original color
+        originalColors.current[layerId] = color
 
         if (!map.current.getSource(sourceId)) {
           map.current.addSource(sourceId, {
@@ -99,6 +94,21 @@ const ActivityMap = ({ center, activities }) => {
               "line-color": color,
               "line-width": 4,
             },
+          })
+
+          // Event listener for mouse enter
+          map.current.on("mouseenter", layerId, () => {
+            map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
+            map.current.setPaintProperty(layerId, "line-width", 6)
+            map.current.getCanvas().style.cursor = "pointer"
+          })
+
+          // Event listener for mouse leave
+          map.current.on("mouseleave", layerId, () => {
+            const originalColor = originalColors.current[layerId]
+            map.current.setPaintProperty(layerId, "line-color", originalColor)
+            map.current.setPaintProperty(layerId, "line-width", 4)
+            map.current.getCanvas().style.cursor = ""
           })
         }
       })
