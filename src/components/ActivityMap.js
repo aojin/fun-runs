@@ -21,20 +21,36 @@ const ActivityMap = ({ center, activities }) => {
     if (center && !map.current) {
       map.current = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/outdoors-v11",
+        style: "mapbox://styles/aojin91/clxuz1mxm00sl01obcdlk5hg4",
         center: center,
         zoom: 12,
+        pitch: 75, // Set the initial pitch to 75 degrees
       })
 
-      // Add zoom and rotation controls to the map.
-      map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
-
+      // Enable 3D terrain
       map.current.on("load", () => {
+        map.current.addSource("mapbox-dem", {
+          type: "raster-dem",
+          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+          tileSize: 512,
+          maxzoom: 14,
+        })
+        map.current.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 })
+
+        map.current.addLayer({
+          id: "hillshading",
+          source: "mapbox-dem",
+          type: "hillshade",
+        })
+
         mapLoaded.current = true
         map.current.resize()
         addActivityLayers()
         updateVisibleActivities()
       })
+
+      // Add zoom and rotation controls to the map.
+      map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
 
       map.current.on("moveend", updateVisibleActivities)
     }
