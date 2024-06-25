@@ -14,6 +14,8 @@ const ActivityMap = ({ center, activities }) => {
   const [displayCount, setDisplayCount] = useState(30)
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
   const originalColors = useRef({})
+  const [hoveredActivityId, setHoveredActivityId] = useState(null)
+  const [highlightedLayerId, setHighlightedLayerId] = useState(null)
 
   useEffect(() => {
     if (center && !map.current) {
@@ -38,11 +40,16 @@ const ActivityMap = ({ center, activities }) => {
     }
   }, [center])
 
+  const generateActivityId = activity => {
+    return `${activity.date}-${activity.name.replace(/\s+/g, "-")}`
+  }
+
   const addActivityLayers = useCallback(() => {
     if (map.current && activities.length > 0 && mapLoaded.current) {
       activities.forEach((activity, index) => {
-        const sourceId = `trail-${index}`
-        const layerId = `trail-${index}`
+        const activityId = generateActivityId(activity)
+        const sourceId = `trail-${activityId}`
+        const layerId = `trail-${activityId}`
 
         const color = `#${Math.floor(Math.random() * 16777215)
           .toString(16)
@@ -64,6 +71,7 @@ const ActivityMap = ({ center, activities }) => {
                     coordinates: activity.coordinates,
                   },
                   properties: {
+                    id: activityId,
                     name: activity.name,
                     type: activity.type,
                     distance: activity.distance,
@@ -79,6 +87,7 @@ const ActivityMap = ({ center, activities }) => {
               ],
             },
           })
+          console.log(`Source added: ${sourceId}`)
         }
 
         if (!map.current.getLayer(layerId)) {
@@ -95,25 +104,40 @@ const ActivityMap = ({ center, activities }) => {
               "line-width": 4,
             },
           })
-
-          // Event listener for mouse enter
-          map.current.on("mouseenter", layerId, () => {
-            map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
-            map.current.setPaintProperty(layerId, "line-width", 6)
-            map.current.getCanvas().style.cursor = "pointer"
-          })
-
-          // Event listener for mouse leave
-          map.current.on("mouseleave", layerId, () => {
-            const originalColor = originalColors.current[layerId]
-            map.current.setPaintProperty(layerId, "line-color", originalColor)
-            map.current.setPaintProperty(layerId, "line-width", 4)
-            map.current.getCanvas().style.cursor = ""
-          })
+          console.log(`Layer added: ${layerId}`)
         }
+
+        // Event listener for mouse enter
+        map.current.on("mouseenter", layerId, () => {
+          if (highlightedLayerId) {
+            const previousOriginalColor =
+              originalColors.current[highlightedLayerId]
+            map.current.setPaintProperty(
+              highlightedLayerId,
+              "line-color",
+              previousOriginalColor
+            )
+            map.current.setPaintProperty(highlightedLayerId, "line-width", 4)
+          }
+
+          setHighlightedLayerId(layerId)
+          setHoveredActivityId(activityId)
+          map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
+          map.current.setPaintProperty(layerId, "line-width", 6)
+          map.current.getCanvas().style.cursor = "pointer"
+        })
+
+        // Event listener for mouse leave
+        map.current.on("mouseleave", layerId, () => {
+          setHoveredActivityId(null)
+          const originalColor = originalColors.current[layerId]
+          map.current.setPaintProperty(layerId, "line-color", originalColor)
+          map.current.setPaintProperty(layerId, "line-width", 4)
+          map.current.getCanvas().style.cursor = ""
+        })
       })
     }
-  }, [activities])
+  }, [activities, highlightedLayerId])
 
   const updateVisibleActivities = useCallback(() => {
     if (map.current && mapLoaded.current) {
@@ -142,8 +166,40 @@ const ActivityMap = ({ center, activities }) => {
     setOpenAccordionIndex(prevIndex => (prevIndex === index ? null : index))
   }
 
+  const handleRowMouseEnter = activityId => {
+    if (highlightedLayerId) {
+      const previousOriginalColor = originalColors.current[highlightedLayerId]
+      map.current.setPaintProperty(
+        highlightedLayerId,
+        "line-color",
+        previousOriginalColor
+      )
+      map.current.setPaintProperty(highlightedLayerId, "line-width", 4)
+    }
+
+    setHoveredActivityId(activityId)
+    const layerId = `trail-${activityId}`
+    setHighlightedLayerId(layerId)
+    if (map.current.getLayer(layerId)) {
+      map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
+      map.current.setPaintProperty(layerId, "line-width", 6)
+    }
+  }
+
+  const handleRowMouseLeave = activityId => {
+    setHoveredActivityId(null)
+    const layerId = `trail-${activityId}`
+    if (map.current.getLayer(layerId)) {
+      const originalColor = originalColors.current[layerId]
+      map.current.setPaintProperty(layerId, "line-color", originalColor)
+      map.current.setPaintProperty(layerId, "line-width", 4)
+    }
+  }
+
   useEffect(() => {
-    addActivityLayers()
+    if (mapLoaded.current) {
+      addActivityLayers()
+    }
   }, [activities, addActivityLayers])
 
   useEffect(() => {
@@ -182,39 +238,49 @@ const ActivityMap = ({ center, activities }) => {
       <div className="floating-card">
         <h3>Visible Activities ({visibleActivities.length})</h3>
         <ul>
-          {visibleActivities.slice(0, displayCount).map((activity, index) => (
-            <li key={index} className="activity-row">
-              <div className="activity-header">
-                <span onClick={() => handleActivityClick(activity.coordinates)}>
-                  {activity.name} -{" "}
-                  {new Date(activity.date).toLocaleDateString()}
-                </span>
-                <span
-                  className="caret"
-                  onClick={() => handleAccordionToggle(index)}
-                >
-                  {openAccordionIndex === index ? "▼" : "►"}
-                </span>
-              </div>
-              {openAccordionIndex === index && (
-                <div className="activity-details">
-                  <ul>
-                    <li>Type: {activity.type}</li>
-                    <li>Distance: {activity.distance} km</li>
-                    <li>Moving Time: {activity.movingTime} mins</li>
-                    <li>Elapsed Time: {activity.elapsedTime} mins</li>
-                    <li>Elevation Gain: {activity.totalElevationGain} m</li>
-                    <li>City: {activity.city}</li>
-                    <li>State: {activity.state}</li>
-                    <li>Country: {activity.country}</li>
-                    <li>
-                      Date: {new Date(activity.date).toLocaleDateString()}
-                    </li>
-                  </ul>
+          {visibleActivities.slice(0, displayCount).map((activity, index) => {
+            const activityId = generateActivityId(activity)
+            return (
+              <li
+                key={activityId}
+                className="activity-row"
+                onMouseEnter={() => handleRowMouseEnter(activityId)}
+                onMouseLeave={() => handleRowMouseLeave(activityId)}
+              >
+                <div className="activity-header">
+                  <span
+                    onClick={() => handleActivityClick(activity.coordinates)}
+                  >
+                    {activity.name} -{" "}
+                    {new Date(activity.date).toLocaleDateString()}
+                  </span>
+                  <span
+                    className="caret"
+                    onClick={() => handleAccordionToggle(index)}
+                  >
+                    {openAccordionIndex === index ? "▼" : "►"}
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
+                {openAccordionIndex === index && (
+                  <div className="activity-details">
+                    <ul>
+                      <li>Type: {activity.type}</li>
+                      <li>Distance: {activity.distance} km</li>
+                      <li>Moving Time: {activity.movingTime} mins</li>
+                      <li>Elapsed Time: {activity.elapsedTime} mins</li>
+                      <li>Elevation Gain: {activity.totalElevationGain} m</li>
+                      <li>City: {activity.city}</li>
+                      <li>State: {activity.state}</li>
+                      <li>Country: {activity.country}</li>
+                      <li>
+                        Date: {new Date(activity.date).toLocaleDateString()}
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
         {displayCount < visibleActivities.length && (
           <button onClick={loadMoreActivities}>Load More</button>
