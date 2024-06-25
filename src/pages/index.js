@@ -1,5 +1,3 @@
-// src/pages/index.js
-
 import React, { useEffect, useState } from "react"
 import ActivityDashboard from "../components/ActivityDashboard"
 import StravaAuth from "../components/StravaAuth"
@@ -51,12 +49,6 @@ const IndexPage = () => {
     }
   }
 
-  const handleLogin = () => {
-    const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
-    const redirectUri = window.location.origin
-    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}/&approval_prompt=force&scope=read,activity:read_all`
-  }
-
   const handleLogout = () => {
     localStorage.removeItem("strava_access_token")
     setAccessToken(null)
@@ -72,6 +64,8 @@ const IndexPage = () => {
       if (token) {
         setAccessToken(token)
         fetchUserProfile(token)
+      } else {
+        setAccessToken(process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN)
       }
     }
   }, [])
@@ -82,8 +76,8 @@ const IndexPage = () => {
         <h1>My Strava Trails</h1>
         <StravaAuth
           profile={profile}
+          setProfile={setProfile}
           onLogout={handleLogout}
-          onLogin={handleLogin}
         />
         {accessToken && <ActivityDashboard accessToken={accessToken} />}
       </div>
