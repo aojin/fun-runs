@@ -3,11 +3,13 @@ import axios from "axios"
 
 const StravaAuth = ({ profile, setProfile, onSwitchUser }) => {
   const [defaultProfile, setDefaultProfile] = useState(null)
+  const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
 
   useEffect(() => {
     const fetchDefaultProfile = async () => {
       try {
         const token = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
+        if (!token) throw new Error("No default token provided")
         const response = await axios.get(
           "https://www.strava.com/api/v3/athlete",
           {
@@ -18,13 +20,15 @@ const StravaAuth = ({ profile, setProfile, onSwitchUser }) => {
         setProfile(response.data)
       } catch (error) {
         console.error("Error fetching default profile:", error)
+      } finally {
+        setAttemptedDefaultFetch(true)
       }
     }
 
-    if (!profile) {
+    if (!profile && !attemptedDefaultFetch) {
       fetchDefaultProfile()
     }
-  }, [profile, setProfile])
+  }, [profile, setProfile, attemptedDefaultFetch])
 
   return (
     <div>

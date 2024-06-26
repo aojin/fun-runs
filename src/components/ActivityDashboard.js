@@ -166,6 +166,10 @@ const ActivityDashboard = ({ accessToken }) => {
       )}
       {!loading && (
         <>
+          <div>
+            <p>Scroll To Adjust Zoom</p>
+            <p>Right-Click or Two Finger Pan to Rotate</p>
+          </div>
           <div ref={mapContainerRef}>
             <ActivityMap
               center={center}

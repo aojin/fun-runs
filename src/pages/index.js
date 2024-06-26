@@ -11,6 +11,9 @@ const IndexPage = () => {
   const [accessToken, setAccessToken] = useState(null)
   const [profile, setProfile] = useState(null)
   const [usingPersonalToken, setUsingPersonalToken] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
+  const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
+  const MAX_RETRIES = 3 // Limit the number of retries to prevent infinite loop
 
   const fetchAccessToken = async code => {
     try {
@@ -51,6 +54,9 @@ const IndexPage = () => {
         "Error fetching Strava profile data:",
         error.response ? error.response.data : error.message
       )
+      if (error.response && error.response.status === 401) {
+        handleInvalidToken()
+      }
     }
   }
 
@@ -76,13 +82,38 @@ const IndexPage = () => {
     }
   }
 
-  const handleSwitchUser = () => {
+  const handleInvalidToken = () => {
     localStorage.removeItem("strava_access_token")
     localStorage.removeItem("strava_refresh_token")
     localStorage.removeItem("strava_expires_at")
     setAccessToken(null)
     setProfile(null)
+    setUsingPersonalToken(true)
+    if (retryCount < MAX_RETRIES) {
+      setRetryCount(retryCount + 1)
+      fetchDefaultUserProfile()
+    } else {
+      console.error("Max retries reached. Please check your default token.")
+    }
+  }
+
+  const handleSwitchUser = () => {
+    handleInvalidToken()
     navigate("/login")
+  }
+
+  const fetchDefaultUserProfile = async () => {
+    try {
+      const token = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
+      if (!token) throw new Error("No default token provided")
+      setAccessToken(token)
+      await fetchUserProfile(token)
+    } catch (error) {
+      console.error("Error fetching default user profile:", error)
+      handleInvalidToken()
+    } finally {
+      setAttemptedDefaultFetch(true)
+    }
   }
 
   useEffect(() => {
@@ -95,8 +126,12 @@ const IndexPage = () => {
         await refreshAccessToken(refreshToken)
       } else {
         const token = localStorage.getItem("strava_access_token")
-        setAccessToken(token)
-        fetchUserProfile(token)
+        if (token) {
+          setAccessToken(token)
+          fetchUserProfile(token)
+        } else if (!attemptedDefaultFetch) {
+          fetchDefaultUserProfile()
+        }
       }
     }
 
@@ -104,12 +139,9 @@ const IndexPage = () => {
     if (code) {
       fetchAccessToken(code)
     } else {
-      const token = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
-      setAccessToken(token)
-      fetchUserProfile(token)
-      setUsingPersonalToken(true)
+      checkAndRefreshToken()
     }
-  }, [])
+  }, [attemptedDefaultFetch])
 
   return (
     <Layout>

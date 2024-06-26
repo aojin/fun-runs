@@ -105,7 +105,7 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
               ],
             },
           })
-          console.log(`Source added: ${sourceId}`)
+          // console.log(`Source added: ${sourceId}`)
         }
 
         if (!map.current.getLayer(layerId)) {
@@ -122,7 +122,7 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
               "line-width": 4,
             },
           })
-          console.log(`Layer added: ${layerId}`)
+          // console.log(`Layer added: ${layerId}`)
         }
 
         // Event listener for mouse enter
