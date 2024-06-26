@@ -304,8 +304,14 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
                     <ul>
                       <li>Type: {activity.type}</li>
                       <li>Distance: {distance}</li>
-                      <li>Moving Time: {activity.movingTime} mins</li>
-                      <li>Elapsed Time: {activity.elapsedTime} mins</li>
+                      <li>
+                        Moving Time: {(activity.movingTime / 60).toFixed(2)}{" "}
+                        mins
+                      </li>
+                      <li>
+                        Elapsed Time: {(activity.elapsedTime / 60).toFixed(2)}{" "}
+                        mins
+                      </li>
                       <li>Elevation Gain: {elevationGain}</li>
                       <li>City: {activity.city}</li>
                       <li>State: {activity.state}</li>
