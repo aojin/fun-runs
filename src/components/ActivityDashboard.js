@@ -84,6 +84,7 @@ const ActivityDashboard = ({ accessToken }) => {
               "en-US"
             )
             return {
+              id: activity.id, // Ensure there's a unique identifier
               name: activity.name,
               type: activity.type,
               distance: activity.distance,
@@ -101,10 +102,17 @@ const ActivityDashboard = ({ accessToken }) => {
           })
         )
 
-        setActivities(prevActivities => [
-          ...prevActivities,
-          ...activitiesWithCoordinates,
-        ])
+        setActivities(prevActivities => {
+          const newActivities = activitiesWithCoordinates.filter(
+            newActivity => {
+              return !prevActivities.some(
+                activity => activity.id === newActivity.id
+              )
+            }
+          )
+
+          return [...prevActivities, ...newActivities]
+        })
 
         if (page === 1 && activitiesWithCoordinates.length > 0) {
           const latestActivity = activitiesWithCoordinates[0]
@@ -159,7 +167,12 @@ const ActivityDashboard = ({ accessToken }) => {
       {!loading && (
         <>
           <div ref={mapContainerRef}>
-            <ActivityMap center={center} activities={activities} />
+            <ActivityMap
+              center={center}
+              activities={activities}
+              unitSystem={unitSystem}
+              toggleUnitSystem={toggleUnitSystem}
+            />
           </div>
           <ActivityTable
             activities={activities}

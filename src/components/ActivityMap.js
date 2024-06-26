@@ -1,3 +1,5 @@
+// src/components/ActivityMap.js
+
 import React, { useEffect, useRef, useState, useCallback } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -5,7 +7,7 @@ import "./ActivityMap.css"
 
 mapboxgl.accessToken = process.env.GATSBY_MAPBOX_ACCESS_TOKEN
 
-const ActivityMap = ({ center, activities }) => {
+const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
   const mapContainerRef = useRef(null)
   const map = useRef(null)
   const mapLoaded = useRef(false)
@@ -167,7 +169,18 @@ const ActivityMap = ({ center, activities }) => {
           })
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date))
-      setVisibleActivities(visible)
+
+      // Check for duplicates in the visible activities
+      const uniqueVisibleActivities = visible.reduce((acc, current) => {
+        const x = acc.find(item => item.id === current.id)
+        if (!x) {
+          return acc.concat([current])
+        } else {
+          return acc
+        }
+      }, [])
+
+      setVisibleActivities(uniqueVisibleActivities)
     }
   }, [activities])
 
@@ -256,6 +269,15 @@ const ActivityMap = ({ center, activities }) => {
         <ul>
           {visibleActivities.slice(0, displayCount).map((activity, index) => {
             const activityId = generateActivityId(activity)
+            const distance =
+              unitSystem === "metric"
+                ? (activity.distance / 1000).toFixed(2) + " km"
+                : (activity.distance / 1609.34).toFixed(2) + " mi"
+            const elevationGain =
+              unitSystem === "metric"
+                ? activity.totalElevationGain.toFixed(2) + " m"
+                : (activity.totalElevationGain * 3.28084).toFixed(2) + " ft"
+
             return (
               <li
                 key={activityId}
@@ -281,10 +303,10 @@ const ActivityMap = ({ center, activities }) => {
                   <div className="activity-details">
                     <ul>
                       <li>Type: {activity.type}</li>
-                      <li>Distance: {activity.distance} km</li>
+                      <li>Distance: {distance}</li>
                       <li>Moving Time: {activity.movingTime} mins</li>
                       <li>Elapsed Time: {activity.elapsedTime} mins</li>
-                      <li>Elevation Gain: {activity.totalElevationGain} m</li>
+                      <li>Elevation Gain: {elevationGain}</li>
                       <li>City: {activity.city}</li>
                       <li>State: {activity.state}</li>
                       <li>Country: {activity.country}</li>
