@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 
-const StravaAuth = ({ profile, setProfile, onLogout }) => {
+const StravaAuth = ({ profile, setProfile, onSwitchUser }) => {
   const [defaultProfile, setDefaultProfile] = useState(null)
 
   useEffect(() => {
@@ -26,28 +26,31 @@ const StravaAuth = ({ profile, setProfile, onLogout }) => {
     }
   }, [profile, setProfile])
 
-  const handleLogin = () => {
-    const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
-    const redirectUri = `${window.location.origin}/`
-    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&approval_prompt=force&scope=read,activity:read_all`
-  }
-
   return (
     <div>
       {profile ? (
         <div>
+          <img
+            src={profile.profile}
+            alt={`${profile.firstname} ${profile.lastname}`}
+            style={{
+              borderRadius: "50%",
+              width: "50px",
+              height: "50px",
+              marginRight: "10px",
+            }}
+          />
           <p>
             Logged into Strava as {profile.firstname} {profile.lastname}
           </p>
           <p>Membership Type: {profile.premium ? "Premium" : "Free"}</p>
-          <button onClick={handleLogin}>Switch User</button>
         </div>
       ) : (
         <div>
           <p>Please log in to Strava to view your trails.</p>
-          <button onClick={handleLogin}>Log In</button>
         </div>
       )}
+      <button onClick={onSwitchUser}>Switch User</button>
     </div>
   )
 }

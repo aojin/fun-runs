@@ -76,19 +76,13 @@ const IndexPage = () => {
     }
   }
 
-  const handleLogin = () => {
-    const clientId = process.env.GATSBY_STRAVA_CLIENT_ID
-    const redirectUri = `${window.location.origin}/`
-    window.location.href = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&approval_prompt=force&scope=read,activity:read_all`
-  }
-
   const handleSwitchUser = () => {
     localStorage.removeItem("strava_access_token")
     localStorage.removeItem("strava_refresh_token")
     localStorage.removeItem("strava_expires_at")
     setAccessToken(null)
     setProfile(null)
-    handleLogin()
+    navigate("/login")
   }
 
   useEffect(() => {
@@ -110,7 +104,10 @@ const IndexPage = () => {
     if (code) {
       fetchAccessToken(code)
     } else {
-      checkAndRefreshToken()
+      const token = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
+      setAccessToken(token)
+      fetchUserProfile(token)
+      setUsingPersonalToken(true)
     }
   }, [])
 
@@ -121,7 +118,7 @@ const IndexPage = () => {
         <StravaAuth
           profile={profile}
           setProfile={setProfile}
-          onLogout={handleSwitchUser}
+          onSwitchUser={handleSwitchUser}
         />
         {accessToken && (
           <ActivityDashboard
