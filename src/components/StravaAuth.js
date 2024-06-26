@@ -1,9 +1,7 @@
-// src/components/StravaAuth.js
-
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 
-const StravaAuth = ({ profile, setProfile }) => {
+const StravaAuth = ({ profile, setProfile, onLogout }) => {
   const [defaultProfile, setDefaultProfile] = useState(null)
 
   useEffect(() => {
