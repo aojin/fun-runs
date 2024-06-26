@@ -13,6 +13,7 @@ const IndexPage = () => {
   const [usingPersonalToken, setUsingPersonalToken] = useState(true)
   const [retryCount, setRetryCount] = useState(0)
   const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
+  const [fetchFailed, setFetchFailed] = useState(false) // New state to track fetch failure
   const MAX_RETRIES = 3 // Limit the number of retries to prevent infinite loop
 
   const fetchAccessToken = async code => {
@@ -94,6 +95,7 @@ const IndexPage = () => {
       fetchDefaultUserProfile()
     } else {
       console.error("Max retries reached. Please check your default token.")
+      setFetchFailed(true) // Set fetch failure state to true
     }
   }
 
@@ -136,6 +138,7 @@ const IndexPage = () => {
     }
 
     const { code } = queryString.parse(window.location.search)
+    
     if (code) {
       fetchAccessToken(code)
     } else {
@@ -151,6 +154,7 @@ const IndexPage = () => {
           profile={profile}
           setProfile={setProfile}
           onSwitchUser={handleSwitchUser}
+          fetchFailed={fetchFailed} // Pass the fetch failure state
         />
         {accessToken && (
           <ActivityDashboard

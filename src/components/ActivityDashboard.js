@@ -59,9 +59,9 @@ const ActivityDashboard = ({ accessToken }) => {
         }
       )
 
-      const rateLimitLimit = activitiesResponse.headers["x-ratelimit-limit"]
-      const rateLimitUsage = activitiesResponse.headers["x-ratelimit-usage"]
-      console.log("Rate limit headers:", { rateLimitLimit, rateLimitUsage })
+      // const rateLimitLimit = activitiesResponse.headers["x-ratelimit-limit"]
+      // const rateLimitUsage = activitiesResponse.headers["x-ratelimit-usage"]
+      // console.log("Rate limit headers:", { rateLimitLimit, rateLimitUsage })
 
       const activitiesData = activitiesResponse.data
 

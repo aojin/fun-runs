@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 
-const StravaAuth = ({ profile, setProfile, onSwitchUser }) => {
+const StravaAuth = ({ profile, setProfile, onSwitchUser, fetchFailed }) => {
   const [defaultProfile, setDefaultProfile] = useState(null)
   const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
 
@@ -54,7 +54,9 @@ const StravaAuth = ({ profile, setProfile, onSwitchUser }) => {
           <p>Please log in to Strava to view your trails.</p>
         </div>
       )}
-      <button onClick={onSwitchUser}>Switch User</button>
+      <button onClick={onSwitchUser}>
+        {fetchFailed ? "Log In" : "Switch User"}
+      </button>
     </div>
   )
 }
