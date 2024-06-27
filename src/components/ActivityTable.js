@@ -78,9 +78,9 @@ const ActivityTable = ({
         Header: "Actions",
         Cell: ({ row }) => (
           <button
-            onClick={() => {
+            onClick={() =>
               jumpToActivity([row.original.startLat, row.original.startLng])
-            }}
+            }
           >
             Jump to Activity
           </button>

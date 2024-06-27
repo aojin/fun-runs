@@ -1,3 +1,5 @@
+// src/components/ActivityDashboard.js
+
 import React, { useEffect, useState, useCallback, useRef } from "react"
 import axios from "axios"
 import polyline from "@mapbox/polyline"
@@ -43,8 +45,6 @@ const ActivityDashboard = () => {
   const [hasMore, setHasMore] = useState(true)
   const [unitSystem, setUnitSystem] = useState("imperial")
   const mapContainerRef = useRef(null)
-
-  console.log({ center })
 
   const fetchStravaData = useCallback(
     async (page, accessToken) => {
@@ -151,7 +151,6 @@ const ActivityDashboard = () => {
   )
 
   const jumpToActivity = useCallback(coordinates => {
-    // console.log("coordinates in jumpToActivity", coordinates)
     setCenter(coordinates)
     mapContainerRef.current.scrollIntoView({ behavior: "smooth" })
   }, [])
@@ -240,6 +239,7 @@ const ActivityDashboard = () => {
               activities={activities}
               unitSystem={unitSystem}
               toggleUnitSystem={toggleUnitSystem}
+              setCenter={setCenter} // Pass setCenter down to ActivityMap
             />
           </div>
           <ActivityTable
@@ -249,7 +249,7 @@ const ActivityDashboard = () => {
             loadMoreActivities={loadMoreActivities}
             hasMore={hasMore}
             loading={loading}
-            jumpToActivity={jumpToActivity}
+            jumpToActivity={jumpToActivity} // Pass the function to ActivityTable
           />
         </>
       )}

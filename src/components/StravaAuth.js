@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react"
 import axios from "axios"
 
 const StravaAuth = ({ profile, setProfile, onSwitchUser, fetchFailed }) => {
-  const [defaultProfile, setDefaultProfile] = useState(null)
   const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
 
   useEffect(() => {
@@ -16,7 +15,6 @@ const StravaAuth = ({ profile, setProfile, onSwitchUser, fetchFailed }) => {
             headers: { Authorization: `Bearer ${token}` },
           }
         )
-        setDefaultProfile(response.data)
         setProfile(response.data)
       } catch (error) {
         console.error("Error fetching default profile:", error)

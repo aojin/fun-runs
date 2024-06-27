@@ -1,13 +1,18 @@
-// src/components/ActivityMap.js
-
 import React, { useEffect, useRef, useState, useCallback } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import "./ActivityMap.css"
+import mapboxglSupported from "@mapbox/mapbox-gl-supported"
 
 mapboxgl.accessToken = process.env.GATSBY_MAPBOX_ACCESS_TOKEN
 
-const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
+const ActivityMap = ({
+  center,
+  activities,
+  unitSystem,
+  toggleUnitSystem,
+  setCenter,
+}) => {
   const mapContainerRef = useRef(null)
   const map = useRef(null)
   const mapLoaded = useRef(false)
@@ -16,47 +21,7 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
   const [displayCount, setDisplayCount] = useState(30)
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
   const originalColors = useRef({})
-  const [hoveredActivityId, setHoveredActivityId] = useState(null)
   const [highlightedLayerId, setHighlightedLayerId] = useState(null)
-
-  useEffect(() => {
-    if (center && !map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: "mapbox://styles/aojin91/clxuz1mxm00sl01obcdlk5hg4",
-        center: center,
-        zoom: 12,
-        pitch: 75, // Set the initial pitch to 75 degrees
-      })
-
-      // Enable 3D terrain
-      map.current.on("load", () => {
-        map.current.addSource("mapbox-dem", {
-          type: "raster-dem",
-          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-          tileSize: 512,
-          maxzoom: 14,
-        })
-        map.current.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 })
-
-        map.current.addLayer({
-          id: "hillshading",
-          source: "mapbox-dem",
-          type: "hillshade",
-        })
-
-        mapLoaded.current = true
-        map.current.resize()
-        addActivityLayers()
-        updateVisibleActivities()
-      })
-
-      // Add zoom and rotation controls to the map.
-      map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
-
-      map.current.on("moveend", updateVisibleActivities)
-    }
-  }, [center])
 
   const generateActivityId = activity => {
     return `${activity.date}-${activity.name.replace(/\s+/g, "-")}`
@@ -139,7 +104,6 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
           }
 
           setHighlightedLayerId(layerId)
-          setHoveredActivityId(activityId)
           map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
           map.current.setPaintProperty(layerId, "line-width", 6)
           map.current.getCanvas().style.cursor = "pointer"
@@ -147,7 +111,6 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
 
         // Event listener for mouse leave
         map.current.on("mouseleave", layerId, () => {
-          setHoveredActivityId(null)
           const originalColor = originalColors.current[layerId]
           map.current.setPaintProperty(layerId, "line-color", originalColor)
           map.current.setPaintProperty(layerId, "line-width", 4)
@@ -184,10 +147,60 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
     }
   }, [activities])
 
+  useEffect(() => {
+    if (mapboxglSupported.supported()) {
+      if (center && !map.current) {
+        map.current = new mapboxgl.Map({
+          container: mapContainerRef.current,
+          style: "mapbox://styles/aojin91/clxuz1mxm00sl01obcdlk5hg4",
+          center: center,
+          zoom: 12,
+          pitch: 75, // Set the initial pitch to 75 degrees
+        })
+
+        // Enable 3D terrain
+        map.current.on("load", () => {
+          map.current.addSource("mapbox-dem", {
+            type: "raster-dem",
+            url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+            tileSize: 512,
+            maxzoom: 14,
+          })
+          map.current.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 })
+
+          map.current.addSource("mapbox-hillshade", {
+            type: "raster-dem",
+            url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+            tileSize: 512,
+            maxzoom: 14,
+          })
+
+          map.current.addLayer({
+            id: "hillshading",
+            source: "mapbox-hillshade",
+            type: "hillshade",
+          })
+
+          mapLoaded.current = true
+          map.current.resize()
+          addActivityLayers()
+          updateVisibleActivities()
+        })
+
+        // Add zoom and rotation controls to the map.
+        map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
+
+        map.current.on("moveend", updateVisibleActivities)
+      }
+    } else {
+      mapContainerRef.current.innerHTML =
+        "WebGL is not supported on your browser."
+    }
+  }, [center, addActivityLayers, updateVisibleActivities])
+
   const handleActivityClick = coordinates => {
     if (map.current) {
-      const [lng, lat] = coordinates[0]
-      // console.log({ lng }, { lat })
+      const [lng, lat] = coordinates
       map.current.flyTo({ center: [lng, lat], zoom: 15 })
     }
   }
@@ -207,7 +220,6 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
       map.current.setPaintProperty(highlightedLayerId, "line-width", 4)
     }
 
-    setHoveredActivityId(activityId)
     const layerId = `trail-${activityId}`
     setHighlightedLayerId(layerId)
     if (map.current.getLayer(layerId)) {
@@ -217,7 +229,6 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
   }
 
   const handleRowMouseLeave = activityId => {
-    setHoveredActivityId(null)
     const layerId = `trail-${activityId}`
     if (map.current.getLayer(layerId)) {
       const originalColor = originalColors.current[layerId]
@@ -286,16 +297,23 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
                 onMouseEnter={() => handleRowMouseEnter(activityId)}
                 onMouseLeave={() => handleRowMouseLeave(activityId)}
               >
-                <div className="activity-header">
-                  <span
-                    onClick={() => handleActivityClick(activity.coordinates)}
-                  >
-                    {activity.name} -{" "}
-                    {new Date(activity.date).toLocaleDateString()}
-                  </span>
+                <div
+                  className="activity-header"
+                  onClick={() => handleActivityClick(activity.coordinates[0])}
+                  role="button"
+                  tabIndex={0}
+                  onKeyPress={() =>
+                    handleActivityClick(activity.coordinates[0])
+                  }
+                >
+                  {activity.name} -{" "}
+                  {new Date(activity.date).toLocaleDateString()}
                   <span
                     className="caret"
                     onClick={() => handleAccordionToggle(index)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={() => handleAccordionToggle(index)}
                   >
                     {openAccordionIndex === index ? "▼" : "►"}
                   </span>

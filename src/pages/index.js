@@ -3,6 +3,7 @@ import ActivityDashboard from "../components/ActivityDashboard"
 import Layout from "../components/layout"
 import axios from "axios"
 import "../components/index.css" // Import the global styles
+import "../components/IndexPage.css" // Import the new CSS for profile styling
 
 const IndexPage = () => {
   const [accessToken, setAccessToken] = useState(null)
@@ -52,6 +53,21 @@ const IndexPage = () => {
       <div className="page-container">
         <h1>My Strava Trails</h1>
         {fetchFailed && <p>Failed to fetch data. Please try again later.</p>}
+        {profile && (
+          <div className="profile-container">
+            <img
+              src={profile.profile_medium}
+              alt="Profile"
+              className="profile-pic"
+            />
+            <div className="profile-details">
+              <p>
+                {profile.firstname} {profile.lastname}
+              </p>
+              <p>Subscription: {profile.premium ? "Premium" : "Free"}</p>
+            </div>
+          </div>
+        )}
         {accessToken && <ActivityDashboard accessToken={accessToken} />}
       </div>
     </Layout>
