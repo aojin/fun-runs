@@ -35,7 +35,7 @@ const fetchLocationDetails = async (lat, lng) => {
   }
 }
 
-const ActivityDashboard = ({ accessToken }) => {
+const ActivityDashboard = () => {
   const [activities, setActivities] = useState([])
   const [center, setCenter] = useState(null)
   const [page, setPage] = useState(1)
@@ -45,7 +45,7 @@ const ActivityDashboard = ({ accessToken }) => {
   const mapContainerRef = useRef(null)
 
   const fetchStravaData = useCallback(
-    async page => {
+    async (page, accessToken) => {
       setLoading(true)
       const perPage = 30 // Adjust the number of activities per page as needed
 
@@ -54,6 +54,9 @@ const ActivityDashboard = ({ accessToken }) => {
           "https://strava-server.vercel.app/strava-data",
           {
             params: { page, per_page: perPage },
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           }
         )
         const activitiesResponse = response.data
@@ -135,11 +138,15 @@ const ActivityDashboard = ({ accessToken }) => {
     [unitSystem]
   )
 
-  const loadMoreActivities = useCallback(() => {
-    if (!loading && hasMore) {
-      setPage(prevPage => prevPage + 1)
-    }
-  }, [loading, hasMore])
+  const loadMoreActivities = useCallback(
+    async accessToken => {
+      if (!loading && hasMore) {
+        await fetchStravaData(page + 1, accessToken)
+        setPage(prevPage => prevPage + 1)
+      }
+    },
+    [loading, hasMore, page, fetchStravaData]
+  )
 
   const jumpToActivity = useCallback(coordinates => {
     setCenter(coordinates)
@@ -153,10 +160,45 @@ const ActivityDashboard = ({ accessToken }) => {
   }
 
   useEffect(() => {
-    fetchStravaData(page)
-  }, [page, fetchStravaData])
+    const fetchData = async () => {
+      try {
+        // Fetch the access token
+        const tokenResponse = await axios.get(
+          "https://strava-server.vercel.app/get-access-token"
+        )
+        const accessToken = tokenResponse.data.access_token
 
-  const handleScroll = useCallback(() => {
+        // Fetch the initial Strava data
+        await fetchStravaData(page, accessToken)
+      } catch (error) {
+        console.error("Error fetching access token:", error)
+      }
+    }
+
+    fetchData()
+  }, [fetchStravaData, page])
+
+  useEffect(() => {
+    setPage(1) // Reset to the first page when unit system changes
+    setActivities([])
+    setHasMore(true)
+    const fetchData = async () => {
+      try {
+        const tokenResponse = await axios.get(
+          "https://strava-server.vercel.app/get-access-token"
+        )
+        const accessToken = tokenResponse.data.access_token
+
+        await fetchStravaData(1, accessToken)
+      } catch (error) {
+        console.error("Error fetching access token:", error)
+      }
+    }
+
+    fetchData()
+  }, [unitSystem, fetchStravaData])
+
+  const handleScroll = useCallback(async () => {
     if (
       window.innerHeight + document.documentElement.scrollTop !==
         document.documentElement.offsetHeight ||
@@ -164,20 +206,17 @@ const ActivityDashboard = ({ accessToken }) => {
       !hasMore
     )
       return
-    loadMoreActivities()
+    const tokenResponse = await axios.get(
+      "https://strava-server.vercel.app/get-access-token"
+    )
+    const accessToken = tokenResponse.data.access_token
+    loadMoreActivities(accessToken)
   }, [loading, hasMore, loadMoreActivities])
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [handleScroll])
-
-  useEffect(() => {
-    setPage(1) // Reset to the first page when unit system changes
-    setActivities([])
-    setHasMore(true)
-    fetchStravaData(1) // Fetch the first page of data with the new unit system
-  }, [unitSystem, fetchStravaData])
 
   return (
     <div>
