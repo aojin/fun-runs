@@ -1,5 +1,3 @@
-// src/components/ActivityDashboard.js
-
 import React, { useEffect, useState, useCallback, useRef } from "react"
 import axios from "axios"
 import polyline from "@mapbox/polyline"
@@ -41,48 +39,37 @@ const ActivityDashboard = ({ accessToken }) => {
   const [activities, setActivities] = useState([])
   const [center, setCenter] = useState(null)
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [unitSystem, setUnitSystem] = useState("imperial")
   const mapContainerRef = useRef(null)
 
-  const fetchStravaData = async page => {
-    setLoading(true)
-    const perPage = 30
+  const fetchStravaData = useCallback(
+    async page => {
+      setLoading(true)
+      const perPage = 30 // Adjust the number of activities per page as needed
 
-    try {
-      const activitiesResponse = await axios.get(
-        `https://www.strava.com/api/v3/athlete/activities`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          params: { page, per_page: perPage },
-        }
-      )
+      try {
+        const response = await axios.get(
+          "https://strava-server.vercel.app/strava-data",
+          {
+            params: { page, per_page: perPage },
+          }
+        )
+        const activitiesResponse = response.data
 
-      // const rateLimitLimit = activitiesResponse.headers["x-ratelimit-limit"]
-      // const rateLimitUsage = activitiesResponse.headers["x-ratelimit-usage"]
-      // console.log("Rate limit headers:", { rateLimitLimit, rateLimitUsage })
-
-      const activitiesData = activitiesResponse.data
-
-      if (activitiesData.length === 0) {
-        setHasMore(false)
-      } else {
-        const activitiesWithCoordinates = await Promise.all(
-          activitiesData.map(async activity => {
-            const coordinates = activity.map.summary_polyline
-              ? polyline
-                  .decode(activity.map.summary_polyline)
-                  .map(([lat, lng]) => [lng, lat])
-              : []
-            const startLocation = coordinates[0] || []
-            const locationDetails =
-              startLocation.length > 0
-                ? await fetchLocationDetails(startLocation[1], startLocation[0])
+        const processedActivities = await Promise.all(
+          activitiesResponse.map(async activity => {
+            const coordinates = polyline
+              .decode(activity.map.summary_polyline)
+              .map(coord => [coord[1], coord[0]])
+            const startLocation = activity.start_latlng || []
+            const { city, state, country } =
+              startLocation.length === 2
+                ? await fetchLocationDetails(startLocation[0], startLocation[1])
                 : { city: "", state: "", country: "" }
-            const date = new Date(activity.start_date).toLocaleDateString(
-              "en-US"
-            )
+            const date = new Date(activity.start_date).toLocaleDateString() // Convert date to string
+
             return {
               id: activity.id, // Ensure there's a unique identifier
               name: activity.name,
@@ -90,55 +77,69 @@ const ActivityDashboard = ({ accessToken }) => {
               distance: activity.distance,
               movingTime: activity.moving_time,
               elapsedTime: activity.elapsed_time,
-              totalElevationGain: activity.total_elevation_gain,
+              totalElevationGain:
+                unitSystem === "imperial"
+                  ? (activity.total_elevation_gain * 3.28084).toFixed(2)
+                  : activity.total_elevation_gain,
               coordinates,
               startLat: startLocation[1] || "",
               startLng: startLocation[0] || "",
-              city: locationDetails.city,
-              state: locationDetails.state,
-              country: locationDetails.country,
-              date: date,
+              city,
+              state,
+              country,
+              date,
+              geojson: {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates,
+                },
+                properties: {
+                  name: activity.name,
+                  type: activity.type,
+                },
+              },
             }
           })
         )
 
-        setActivities(prevActivities => {
-          const newActivities = activitiesWithCoordinates.filter(
-            newActivity => {
-              return !prevActivities.some(
-                activity => activity.id === newActivity.id
-              )
-            }
+        setActivities(prevActivities => [
+          ...prevActivities,
+          ...processedActivities,
+        ])
+
+        if (processedActivities.length < perPage) {
+          setHasMore(false)
+        }
+
+        if (processedActivities.length > 0) {
+          const activitiesWithCoordinates = processedActivities.filter(
+            activity => activity.coordinates.length > 0
           )
 
-          return [...prevActivities, ...newActivities]
-        })
-
-        if (page === 1 && activitiesWithCoordinates.length > 0) {
-          const latestActivity = activitiesWithCoordinates[0]
-          const latestCoordinates = latestActivity.coordinates[0]
-          setCenter(latestCoordinates)
+          if (activitiesWithCoordinates.length > 0) {
+            const latestActivity = activitiesWithCoordinates[0]
+            const latestCoordinates = latestActivity.coordinates[0]
+            setCenter(latestCoordinates)
+          }
         }
+      } catch (error) {
+        console.error(
+          "Error fetching Strava data:",
+          error.response ? error.response.data : error.message
+        )
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error(
-        "Error fetching Strava data:",
-        error.response ? error.response.data : error.message
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [unitSystem]
+  )
 
-  const loadMoreActivities = () => {
+  const loadMoreActivities = useCallback(() => {
     if (!loading && hasMore) {
-      setPage(prevPage => {
-        const nextPage = prevPage + 1
-        fetchStravaData(nextPage)
-        return nextPage
-      })
+      setPage(prevPage => prevPage + 1)
     }
-  }
+  }, [loading, hasMore])
 
   const jumpToActivity = useCallback(coordinates => {
     setCenter(coordinates)
@@ -152,10 +153,31 @@ const ActivityDashboard = ({ accessToken }) => {
   }
 
   useEffect(() => {
-    if (accessToken) {
-      fetchStravaData(1)
-    }
-  }, [accessToken])
+    fetchStravaData(page)
+  }, [page, fetchStravaData])
+
+  const handleScroll = useCallback(() => {
+    if (
+      window.innerHeight + document.documentElement.scrollTop !==
+        document.documentElement.offsetHeight ||
+      loading ||
+      !hasMore
+    )
+      return
+    loadMoreActivities()
+  }, [loading, hasMore, loadMoreActivities])
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [handleScroll])
+
+  useEffect(() => {
+    setPage(1) // Reset to the first page when unit system changes
+    setActivities([])
+    setHasMore(true)
+    fetchStravaData(1) // Fetch the first page of data with the new unit system
+  }, [unitSystem, fetchStravaData])
 
   return (
     <div>
