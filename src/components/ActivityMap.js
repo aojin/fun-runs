@@ -187,7 +187,7 @@ const ActivityMap = ({ center, activities, unitSystem, toggleUnitSystem }) => {
   const handleActivityClick = coordinates => {
     if (map.current) {
       const [lng, lat] = coordinates[0]
-      console.log({ lng }, { lat })
+      // console.log({ lng }, { lat })
       map.current.flyTo({ center: [lng, lat], zoom: 15 })
     }
   }

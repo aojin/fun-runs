@@ -151,7 +151,7 @@ const ActivityDashboard = () => {
   )
 
   const jumpToActivity = useCallback(coordinates => {
-    console.log("coordinates in jumpToActivity", coordinates)
+    // console.log("coordinates in jumpToActivity", coordinates)
     setCenter(coordinates)
     mapContainerRef.current.scrollIntoView({ behavior: "smooth" })
   }, [])
