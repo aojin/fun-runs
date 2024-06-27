@@ -75,6 +75,9 @@ const ActivityDashboard = () => {
                 : { city: "", state: "", country: "" }
             const date = new Date(activity.start_date).toLocaleDateString() // Convert date to string
 
+            // Ensure totalElevationGain is a number
+            const totalElevationGain = activity.total_elevation_gain || 0
+
             return {
               id: activity.id, // Ensure there's a unique identifier
               name: activity.name,
@@ -84,8 +87,8 @@ const ActivityDashboard = () => {
               elapsedTime: activity.elapsed_time,
               totalElevationGain:
                 unitSystem === "imperial"
-                  ? (activity.total_elevation_gain * 3.28084).toFixed(2)
-                  : activity.total_elevation_gain,
+                  ? (totalElevationGain * 3.28084).toFixed(2)
+                  : totalElevationGain.toFixed(2),
               coordinates,
               startLat: startLocation[1] || "",
               startLng: startLocation[0] || "",

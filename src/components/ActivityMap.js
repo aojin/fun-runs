@@ -287,8 +287,10 @@ const ActivityMap = ({
                 : (activity.distance / 1609.34).toFixed(2) + " mi"
             const elevationGain =
               unitSystem === "metric"
-                ? activity.totalElevationGain.toFixed(2) + " m"
-                : (activity.totalElevationGain * 3.28084).toFixed(2) + " ft"
+                ? parseFloat(activity.totalElevationGain).toFixed(2) + " m"
+                : (parseFloat(activity.totalElevationGain) * 3.28084).toFixed(
+                    2
+                  ) + " ft"
 
             return (
               <li

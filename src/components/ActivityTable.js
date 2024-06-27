@@ -49,10 +49,13 @@ const ActivityTable = ({
         Header: `Total Elevation Gain (${
           unitSystem === "metric" ? "m" : "ft"
         })`,
-        accessor: activity =>
-          unitSystem === "metric"
-            ? activity.totalElevationGain.toFixed(2)
-            : (activity.totalElevationGain * 3.28084).toFixed(2),
+        accessor: activity => {
+          const totalElevationGain =
+            parseFloat(activity.totalElevationGain) || 0
+          return unitSystem === "metric"
+            ? totalElevationGain.toFixed(2)
+            : (totalElevationGain * 3.28084).toFixed(2)
+        },
       },
       {
         Header: "City",
