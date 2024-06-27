@@ -44,6 +44,8 @@ const ActivityDashboard = () => {
   const [unitSystem, setUnitSystem] = useState("imperial")
   const mapContainerRef = useRef(null)
 
+  console.log({ center })
+
   const fetchStravaData = useCallback(
     async (page, accessToken) => {
       setLoading(true)
@@ -149,6 +151,7 @@ const ActivityDashboard = () => {
   )
 
   const jumpToActivity = useCallback(coordinates => {
+    console.log("coordinates in jumpToActivity", coordinates)
     setCenter(coordinates)
     mapContainerRef.current.scrollIntoView({ behavior: "smooth" })
   }, [])
