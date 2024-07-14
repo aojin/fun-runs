@@ -16,12 +16,14 @@ const ActivityMap = ({
   const mapContainerRef = useRef(null)
   const map = useRef(null)
   const mapLoaded = useRef(false)
+  const [satelliteVisible, setSatelliteVisible] = useState(false)
   const scrollTimeout = useRef(null)
   const [visibleActivities, setVisibleActivities] = useState([])
   const [displayCount, setDisplayCount] = useState(30)
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
   const originalColors = useRef({})
   const [highlightedFeatureId, setHighlightedFeatureId] = useState(null)
+  const activitiesLoaded = useRef([]) // Store loaded activities to prevent unnecessary re-renders
 
   const generateActivityId = activity => {
     return `${activity.date}-${activity.name.replace(/\s+/g, "-")}`
@@ -182,6 +184,23 @@ const ActivityMap = ({
             type: "hillshade",
           })
 
+          // Add the satellite layer
+          map.current.addLayer({
+            id: "satellite",
+            type: "raster",
+            source: {
+              type: "raster",
+              tiles: [
+                "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=" +
+                  mapboxgl.accessToken,
+              ],
+              tileSize: 256,
+            },
+            layout: {
+              visibility: "none", // Initially hidden
+            },
+          })
+
           mapLoaded.current = true
           map.current.resize()
           addActivityLayer()
@@ -199,6 +218,22 @@ const ActivityMap = ({
     }
   }, [center, addActivityLayer, updateVisibleActivities])
 
+  const toggleSatelliteLayer = () => {
+    if (map.current) {
+      const visibility = map.current.getLayoutProperty(
+        "satellite",
+        "visibility"
+      )
+      if (visibility === "visible") {
+        map.current.setLayoutProperty("satellite", "visibility", "none")
+        setSatelliteVisible(false)
+      } else {
+        map.current.setLayoutProperty("satellite", "visibility", "visible")
+        setSatelliteVisible(true)
+      }
+    }
+  }
+
   const handleActivityClick = coordinates => {
     if (map.current) {
       const [lng, lat] = coordinates
@@ -213,12 +248,20 @@ const ActivityMap = ({
   const handleRowMouseEnter = activityId => {
     setHighlightedFeatureId(activityId)
     map.current.setFilter("activities-highlighted", ["==", "id", activityId])
+    map.current.setPaintProperty(
+      "activities-highlighted",
+      "line-color",
+      "#FC4C02"
+    ) // Strava orange
+    map.current.setPaintProperty("activities-highlighted", "line-width", 6)
   }
 
   const handleRowMouseLeave = activityId => {
     if (highlightedFeatureId === activityId) {
       setHighlightedFeatureId(null)
       map.current.setFilter("activities-highlighted", ["==", "id", ""])
+      map.current.setPaintProperty("activities-highlighted", "line-color", "") // Reset color
+      map.current.setPaintProperty("activities-highlighted", "line-width", 4)
     }
   }
 
@@ -256,7 +299,13 @@ const ActivityMap = ({
   }, [])
 
   const loadMoreActivities = () => {
-    setDisplayCount(prevCount => prevCount + 30)
+    const newDisplayCount = displayCount + 30
+    setDisplayCount(newDisplayCount)
+    activitiesLoaded.current = [
+      ...activitiesLoaded.current,
+      ...visibleActivities.slice(displayCount, newDisplayCount),
+    ]
+    setVisibleActivities(activitiesLoaded.current)
   }
 
   return (
@@ -280,7 +329,7 @@ const ActivityMap = ({
             return (
               <li
                 key={activityId}
-                className="activity-row"
+                className="activity-row cursor-pointer" // Add cursor-pointer class
                 onMouseEnter={() => handleRowMouseEnter(activityId)}
                 onMouseLeave={() => handleRowMouseLeave(activityId)}
               >
@@ -335,6 +384,11 @@ const ActivityMap = ({
         {displayCount < visibleActivities.length && (
           <button onClick={loadMoreActivities}>Load More</button>
         )}
+      </div>
+      <div className="layer-controls">
+        <button onClick={toggleSatelliteLayer}>
+          {satelliteVisible ? "Hide Satellite Layer" : "Show Satellite Layer"}
+        </button>
       </div>
     </div>
   )
