@@ -21,104 +21,11 @@ const ActivityMap = ({
   const [displayCount, setDisplayCount] = useState(30)
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null)
   const originalColors = useRef({})
-  const [highlightedLayerId, setHighlightedLayerId] = useState(null)
+  const [highlightedFeatureId, setHighlightedFeatureId] = useState(null)
 
   const generateActivityId = activity => {
     return `${activity.date}-${activity.name.replace(/\s+/g, "-")}`
   }
-
-  const addActivityLayers = useCallback(() => {
-    if (map.current && activities.length > 0 && mapLoaded.current) {
-      activities.forEach((activity, index) => {
-        const activityId = generateActivityId(activity)
-        const sourceId = `trail-${activityId}`
-        const layerId = `trail-${activityId}`
-
-        const color = `#${Math.floor(Math.random() * 16777215)
-          .toString(16)
-          .padStart(6, "0")}`
-
-        // Store the original color
-        originalColors.current[layerId] = color
-
-        if (!map.current.getSource(sourceId)) {
-          map.current.addSource(sourceId, {
-            type: "geojson",
-            data: {
-              type: "FeatureCollection",
-              features: [
-                {
-                  type: "Feature",
-                  geometry: {
-                    type: "LineString",
-                    coordinates: activity.coordinates,
-                  },
-                  properties: {
-                    id: activityId,
-                    name: activity.name,
-                    type: activity.type,
-                    distance: activity.distance,
-                    movingTime: activity.movingTime,
-                    elapsedTime: activity.elapsedTime,
-                    totalElevationGain: activity.totalElevationGain,
-                    city: activity.city,
-                    state: activity.state,
-                    country: activity.country,
-                    date: activity.date,
-                  },
-                },
-              ],
-            },
-          })
-          // console.log(`Source added: ${sourceId}`)
-        }
-
-        if (!map.current.getLayer(layerId)) {
-          map.current.addLayer({
-            id: layerId,
-            type: "line",
-            source: sourceId,
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": color,
-              "line-width": 4,
-            },
-          })
-          // console.log(`Layer added: ${layerId}`)
-        }
-
-        // Event listener for mouse enter
-        map.current.on("mouseenter", layerId, () => {
-          if (highlightedLayerId) {
-            const previousOriginalColor =
-              originalColors.current[highlightedLayerId]
-            map.current.setPaintProperty(
-              highlightedLayerId,
-              "line-color",
-              previousOriginalColor
-            )
-            map.current.setPaintProperty(highlightedLayerId, "line-width", 4)
-          }
-
-          setHighlightedLayerId(layerId)
-          map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
-          map.current.setPaintProperty(layerId, "line-width", 6)
-          map.current.getCanvas().style.cursor = "pointer"
-        })
-
-        // Event listener for mouse leave
-        map.current.on("mouseleave", layerId, () => {
-          const originalColor = originalColors.current[layerId]
-          map.current.setPaintProperty(layerId, "line-color", originalColor)
-          map.current.setPaintProperty(layerId, "line-width", 4)
-          map.current.getCanvas().style.cursor = ""
-        })
-      })
-    }
-  }, [activities, highlightedLayerId])
 
   const updateVisibleActivities = useCallback(() => {
     if (map.current && mapLoaded.current) {
@@ -144,6 +51,100 @@ const ActivityMap = ({
       }, [])
 
       setVisibleActivities(uniqueVisibleActivities)
+    }
+  }, [activities])
+
+  const addActivityLayer = useCallback(() => {
+    if (!mapLoaded.current) return
+
+    const features = activities.map(activity => ({
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: activity.coordinates,
+      },
+      properties: {
+        id: generateActivityId(activity),
+        name: activity.name,
+        type: activity.type,
+        distance: activity.distance,
+        movingTime: activity.movingTime,
+        elapsedTime: activity.elapsedTime,
+        totalElevationGain: activity.totalElevationGain,
+        city: activity.city,
+        state: activity.state,
+        country: activity.country,
+        date: activity.date,
+        color: `#${Math.floor(Math.random() * 16777215)
+          .toString(16)
+          .padStart(6, "0")}`,
+      },
+    }))
+
+    if (!map.current.getSource("activities")) {
+      map.current.addSource("activities", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features,
+        },
+      })
+
+      map.current.addLayer({
+        id: "activities",
+        type: "line",
+        source: "activities",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 4,
+          "line-opacity": 0.8,
+        },
+      })
+
+      map.current.addLayer({
+        id: "activities-highlighted",
+        type: "line",
+        source: "activities",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#FC4C02",
+          "line-width": 6,
+          "line-opacity": 1,
+        },
+        filter: ["==", "id", ""], // Initially no feature is highlighted
+      })
+
+      map.current.on("mousemove", "activities", e => {
+        if (e.features.length > 0) {
+          const feature = e.features[0]
+          setHighlightedFeatureId(feature.properties.id)
+          map.current.setFilter("activities-highlighted", [
+            "==",
+            "id",
+            feature.properties.id,
+          ])
+          map.current.getCanvas().style.cursor = "pointer" // Change cursor to pointer
+        }
+      })
+
+      map.current.on("mouseleave", "activities", () => {
+        setHighlightedFeatureId(null)
+        map.current.setFilter("activities-highlighted", ["==", "id", ""])
+        map.current.getCanvas().style.cursor = "" // Reset cursor
+      })
+    } else {
+      const source = map.current.getSource("activities")
+      source.setData({
+        type: "FeatureCollection",
+        features,
+      })
     }
   }, [activities])
 
@@ -183,7 +184,7 @@ const ActivityMap = ({
 
           mapLoaded.current = true
           map.current.resize()
-          addActivityLayers()
+          addActivityLayer()
           updateVisibleActivities()
         })
 
@@ -196,7 +197,7 @@ const ActivityMap = ({
       mapContainerRef.current.innerHTML =
         "WebGL is not supported on your browser."
     }
-  }, [center, addActivityLayers, updateVisibleActivities])
+  }, [center, addActivityLayer, updateVisibleActivities])
 
   const handleActivityClick = coordinates => {
     if (map.current) {
@@ -210,38 +211,22 @@ const ActivityMap = ({
   }
 
   const handleRowMouseEnter = activityId => {
-    if (highlightedLayerId) {
-      const previousOriginalColor = originalColors.current[highlightedLayerId]
-      map.current.setPaintProperty(
-        highlightedLayerId,
-        "line-color",
-        previousOriginalColor
-      )
-      map.current.setPaintProperty(highlightedLayerId, "line-width", 4)
-    }
-
-    const layerId = `trail-${activityId}`
-    setHighlightedLayerId(layerId)
-    if (map.current.getLayer(layerId)) {
-      map.current.setPaintProperty(layerId, "line-color", "#FC4C02") // Strava orange
-      map.current.setPaintProperty(layerId, "line-width", 6)
-    }
+    setHighlightedFeatureId(activityId)
+    map.current.setFilter("activities-highlighted", ["==", "id", activityId])
   }
 
   const handleRowMouseLeave = activityId => {
-    const layerId = `trail-${activityId}`
-    if (map.current.getLayer(layerId)) {
-      const originalColor = originalColors.current[layerId]
-      map.current.setPaintProperty(layerId, "line-color", originalColor)
-      map.current.setPaintProperty(layerId, "line-width", 4)
+    if (highlightedFeatureId === activityId) {
+      setHighlightedFeatureId(null)
+      map.current.setFilter("activities-highlighted", ["==", "id", ""])
     }
   }
 
   useEffect(() => {
     if (mapLoaded.current) {
-      addActivityLayers()
+      addActivityLayer()
     }
-  }, [activities, addActivityLayers])
+  }, [activities, addActivityLayer])
 
   useEffect(() => {
     if (map.current && center) {
