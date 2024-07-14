@@ -103,7 +103,7 @@ const ActivityMap = ({
         paint: {
           "line-color": ["get", "color"],
           "line-width": 4,
-          "line-opacity": 0.8,
+          "line-opacity": 0.9,
         },
       })
 
@@ -196,6 +196,31 @@ const ActivityMap = ({
               ],
               tileSize: 256,
             },
+            paint: {
+              "raster-opacity": 0.75, // Adjust the opacity of the satellite layer
+            },
+            layout: {
+              visibility: "none", // Initially hidden
+            },
+          })
+
+          // Add a vector source for contours
+          map.current.addSource("contours", {
+            type: "vector",
+            url: "mapbox://mapbox.mapbox-terrain-v2",
+          })
+
+          map.current.addLayer({
+            id: "contours",
+            type: "line",
+            source: "contours",
+            "source-layer": "contour",
+            layout: {},
+            paint: {
+              "line-color": "#D2B48C", // Subtle tan color for contours
+              "line-width": 2, // Increase the width for better visibility
+              "line-opacity": 0.5,
+            },
             layout: {
               visibility: "none", // Initially hidden
             },
@@ -220,16 +245,42 @@ const ActivityMap = ({
 
   const toggleSatelliteLayer = () => {
     if (map.current) {
-      const visibility = map.current.getLayoutProperty(
+      const satelliteVisibility = map.current.getLayoutProperty(
         "satellite",
         "visibility"
       )
-      if (visibility === "visible") {
+      const contoursVisibility = map.current.getLayoutProperty(
+        "contours",
+        "visibility"
+      )
+      if (satelliteVisibility === "visible") {
         map.current.setLayoutProperty("satellite", "visibility", "none")
+        map.current.setLayoutProperty("contours", "visibility", "none")
+        map.current.setPaintProperty("activities", "line-width", 4)
+        map.current.setPaintProperty("activities", "line-opacity", 0.9)
+        map.current.setPaintProperty(
+          "activities-highlighted",
+          "line-color",
+          "#FC4C02"
+        )
         setSatelliteVisible(false)
+        console.log(
+          "Satellite layer hidden, activity line width and opacity reset"
+        )
       } else {
         map.current.setLayoutProperty("satellite", "visibility", "visible")
+        map.current.setLayoutProperty("contours", "visibility", "visible")
+        map.current.setPaintProperty("activities", "line-width", 8)
+        map.current.setPaintProperty("activities", "line-opacity", 1)
+        map.current.setPaintProperty(
+          "activities-highlighted",
+          "line-color",
+          "#FC4C02"
+        )
         setSatelliteVisible(true)
+        console.log(
+          "Satellite layer shown, activity line width and opacity increased"
+        )
       }
     }
   }
@@ -260,7 +311,11 @@ const ActivityMap = ({
     if (highlightedFeatureId === activityId) {
       setHighlightedFeatureId(null)
       map.current.setFilter("activities-highlighted", ["==", "id", ""])
-      map.current.setPaintProperty("activities-highlighted", "line-color", "") // Reset color
+      map.current.setPaintProperty(
+        "activities-highlighted",
+        "line-color",
+        "#000"
+      ) // Reset color to default (black)
       map.current.setPaintProperty("activities-highlighted", "line-width", 4)
     }
   }
