@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 
+const API_BASE =
+  process.env.GATSBY_API_BASE || "https://strava-server.vercel.app"
+
 const StravaAuth = ({ profile, setProfile, onSwitchUser, fetchFailed }) => {
   const [attemptedDefaultFetch, setAttemptedDefaultFetch] = useState(false)
 
   useEffect(() => {
     const fetchDefaultProfile = async () => {
       try {
-        const token = process.env.GATSBY_PERSONAL_STRAVA_ACCESS_TOKEN
-        if (!token) throw new Error("No default token provided")
+        // Fetch via our backend, not Strava directly
+        const tokenResponse = await axios.get(`${API_BASE}/get-access-token`)
+        const accessToken = tokenResponse.data.access_token
+
         const response = await axios.get(
           "https://www.strava.com/api/v3/athlete",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         )
+
         setProfile(response.data)
       } catch (error) {
         console.error("Error fetching default profile:", error)
