@@ -4,7 +4,6 @@ import Layout from "../components/layout"
 import axios from "axios"
 import "../components/index.css"
 import "../components/IndexPage.css"
-import stravaLogo from "../public/strava-logo.png";
 
 const IndexPage = () => {
   const [accessToken, setAccessToken] = useState(null)
@@ -61,7 +60,7 @@ const IndexPage = () => {
         {/* Header: My [Strava logo] Trails */}
         <div className="header-row">
           <h1 className="page-title">My</h1>
-          <img src={stravaLogo} alt="Strava Logo" className="strava-logo" />
+          <img src="/strava-logo.png" alt="Strava Logo" className="strava-logo" />
           <h1 className="page-title">Trails</h1>
         </div>
 
@@ -115,7 +114,8 @@ const IndexPage = () => {
               <li>Scroll to zoom in/out on the map.</li>
               <li>Click and drag with left mouse button to pan.</li>
               <li>
-                Right-click drag <em>or</em> hold Ctrl + drag to <strong>rotate/tilt</strong> the map.
+                Right-click drag <em>or</em> hold Ctrl + drag to{" "}
+                <strong>rotate/tilt</strong> the map.
               </li>
               <li>
                 To jump to a specific activity, either click the{" "}
