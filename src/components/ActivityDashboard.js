@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import polyline from "@mapbox/polyline";
-import ActivityMap from "./ActivityMap";
+import ActivityMap, { VisibleActivitiesCard } from "./ActivityMap";
 import ActivityTable from "./ActivityTable";
 import "./ActivityDashboard.css";
 
-const API_BASE =
-  process.env.GATSBY_API_BASE || "https://strava-server.vercel.app";
-
-// ---------- Small UI primitives ----------
+/* -------------------------
+   Small UI primitives
+------------------------- */
 function TopProgress({ active }) {
   return <div className={`top-progress ${active ? "active" : ""}`} />;
 }
@@ -61,7 +60,26 @@ function TableSkeleton({ rows = 8, cols = 6 }) {
     </div>
   );
 }
-// -----------------------------------------
+
+/* -------------------------
+   Responsive Hook
+------------------------- */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+/* -------------------------
+   Fetch helpers
+------------------------- */
+const API_BASE =
+  process.env.GATSBY_API_BASE || "https://strava-server.vercel.app";
 
 const fetchLocationDetails = async (lat, lng) => {
   const mapboxAccessToken = process.env.GATSBY_MAPBOX_ACCESS_TOKEN;
@@ -88,37 +106,44 @@ const fetchLocationDetails = async (lat, lng) => {
   }
 };
 
+/* -------------------------
+   Dashboard
+------------------------- */
 const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
   const [activities, setActivities] = useState([]);
+  const [visibleActivities, setVisibleActivities] = useState([]);
+  const [displayCount, setDisplayCount] = useState(10);
   const [center, setCenter] = useState(null);
   const [page, setPage] = useState(1);
   const [unitSystem, setUnitSystem] = useState("imperial");
 
-  // New UX states
+  // Shared state for both desktop + mobile
+  const [highlightedFeatureId, setHighlightedFeatureId] = useState(null);
+  const [openAccordionIndex, setOpenAccordionIndex] = useState(null);
+
+  // Loading & error states
   const [initLoading, setInitLoading] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
 
-  // For cancellation
   const inFlight = useRef([]);
-
-  // ⬇️ NEW: ref to the map container so we can scroll to it
   const mapWrapperRef = useRef(null);
+  const isMobile = useIsMobile();
 
-  // Helper: cancel all in-flight Axios requests
+  /* ---------- Cancel helpers ---------- */
   const cancelAll = () => {
     inFlight.current.forEach((c) => c.abort && c.abort());
     inFlight.current = [];
   };
-
   const withAbort = () => {
     const controller = new AbortController();
     inFlight.current.push(controller);
     return controller;
   };
 
+  /* ---------- Token fetch ---------- */
   const getAccessToken = useCallback(async () => {
     if (accessTokenProp) return accessTokenProp;
     const controller = withAbort();
@@ -128,6 +153,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     return res.data.access_token;
   }, [accessTokenProp]);
 
+  /* ---------- Strava fetch ---------- */
   const fetchStravaData = useCallback(
     async (nextPage, token, reset = false) => {
       const perPage = 30;
@@ -145,7 +171,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
           activitiesResponse.map(async (activity) => {
             const coordinates = polyline
               .decode(activity.map.summary_polyline || "")
-              .map((coord) => [coord[1], coord[0]]); // [lng, lat]
+              .map((coord) => [coord[1], coord[0]]);
 
             const startLocation = activity.start_latlng || [];
             const { city, state, country } =
@@ -154,15 +180,16 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
                 : { city: "", state: "", country: "" };
 
             const date = new Date(activity.start_date).toLocaleDateString();
-            const totalElevationGainMeters = activity.total_elevation_gain || 0;
+            const totalElevationGainMeters =
+              activity.total_elevation_gain || 0;
 
             return {
               id: activity.id,
               name: activity.name,
               type: activity.type,
-              distance: activity.distance, // meters
-              movingTime: activity.moving_time, // seconds
-              elapsedTime: activity.elapsed_time, // seconds
+              distance: activity.distance,
+              movingTime: activity.moving_time,
+              elapsedTime: activity.elapsed_time,
               totalElevationGainMeters,
               coordinates,
               startLat: startLocation[0] || "",
@@ -199,7 +226,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     []
   );
 
-  // Boot: immediate skeleton + fetch
+  /* ---------- Initial fetch ---------- */
   useEffect(() => {
     let mounted = true;
     setError(null);
@@ -229,7 +256,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     };
   }, [getAccessToken, fetchStravaData]);
 
-  // Reload on unit change (can be removed if you prefer render-only conversion)
+  /* ---------- Refetch on unit change ---------- */
   useEffect(() => {
     let mounted = true;
     if (initLoading) return;
@@ -261,6 +288,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitSystem]);
 
+  /* ---------- Load more ---------- */
   const loadMoreActivities = useCallback(async () => {
     if (isFetchingMore || !hasMore) return;
     setIsFetchingMore(true);
@@ -277,6 +305,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     }
   }, [isFetchingMore, hasMore, page, fetchStravaData, getAccessToken]);
 
+  /* ---------- Retry ---------- */
   const retryInitial = useCallback(() => {
     setInitLoading(true);
     setError(null);
@@ -299,15 +328,15 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
   const toggleUnitSystem = () =>
     setUnitSystem((prev) => (prev === "metric" ? "imperial" : "metric"));
 
-  // ⬇️ NEW: smooth scroll to map wrapper (with small offset for any sticky header)
+  /* ---------- Scroll helper ---------- */
   const scrollToMap = () => {
     if (!mapWrapperRef.current) return;
     const rect = mapWrapperRef.current.getBoundingClientRect();
-    const y = window.pageYOffset + rect.top - 80; // adjust 80px if your header height differs
+    const y = window.pageYOffset + rect.top - 80;
     window.scrollTo({ top: y, behavior: "smooth" });
   };
 
-  // Render
+  /* ---------- Render ---------- */
   return (
     <div>
       <TopProgress active={initLoading || isRefetching} />
@@ -322,14 +351,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
 
       {!initLoading && (
         <>
-          <div style={{ margin: "8px 0" }}>
-            <p style={{ margin: 0, opacity: 0.8 }}>Scroll To Adjust Zoom</p>
-            <p style={{ margin: 0, opacity: 0.8 }}>
-              Right-Click or Two Finger Pan to Rotate
-            </p>
-          </div>
-
-          {/* ⬇️ Wrap the map in a ref'd container so we can scroll to it */}
+          {/* Map */}
           <div ref={mapWrapperRef} style={{ position: "relative" }}>
             <LoaderOverlay show={isRefetching}>
               <div style={{ marginTop: 8 }}>Updating units…</div>
@@ -340,9 +362,42 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
               unitSystem={unitSystem}
               toggleUnitSystem={toggleUnitSystem}
               setCenter={setCenter}
+              showFloatingCard={!isMobile}
+              displayCount={displayCount}
+              setDisplayCount={setDisplayCount}
+              visibleActivities={visibleActivities}
+              onVisibleChange={setVisibleActivities}
+              highlightedFeatureId={highlightedFeatureId}
+              setHighlightedFeatureId={setHighlightedFeatureId}
+              openAccordionIndex={openAccordionIndex}
+              setOpenAccordionIndex={setOpenAccordionIndex}
             />
           </div>
 
+          {/* Mobile: render activities below map */}
+          {isMobile && visibleActivities.length > 0 && (
+            <VisibleActivitiesCard
+              activities={visibleActivities}
+              unitSystem={unitSystem}
+              displayCount={displayCount}
+              setDisplayCount={setDisplayCount}
+              onActivityClick={(a) => {
+                setCenter(a.coordinates[0] || [a.startLng, a.startLat]);
+                setHighlightedFeatureId(
+                  `${a.id || a.date}-${a.name.replace(/\s+/g, "-")}`
+                );
+                scrollToMap();
+              }}
+              highlightedFeatureId={highlightedFeatureId}
+              setHighlightedFeatureId={setHighlightedFeatureId}
+              openAccordionIndex={openAccordionIndex}
+              setOpenAccordionIndex={setOpenAccordionIndex}
+              collapsible={true}
+              forceMobile={true}
+            />
+          )}
+
+          {/* Table */}
           <ActivityTable
             activities={activities}
             unitSystem={unitSystem}
@@ -350,7 +405,6 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
             loadMoreActivities={loadMoreActivities}
             hasMore={hasMore}
             isFetchingMore={isFetchingMore}
-            // ⬇️ On jump: center the map then scroll to it
             jumpToActivity={(coords) => {
               setCenter(coords);
               scrollToMap();

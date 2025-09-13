@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import { useTable } from "react-table";
 import "./ActivityDashboard.css";
 
@@ -8,14 +8,31 @@ const ActivityTable = ({
   toggleUnitSystem,
   loadMoreActivities,
   hasMore,
-  loading,         // kept for backward-compat but unused
-  isFetchingMore,  // NEW: to show bottom loader
+  isFetchingMore,
   jumpToActivity,
 }) => {
+  const dateColRef = useRef(null);
+
+  // measure Date column width and expose as CSS variable
+  useEffect(() => {
+    if (dateColRef.current) {
+      const width = dateColRef.current.offsetWidth;
+      document.documentElement.style.setProperty(
+        "--date-col-width",
+        `${width}px`
+      );
+    }
+  }, [activities]);
+
   const columns = useMemo(
     () => [
-      { Header: "Date", accessor: "date", className: "fixed-column left" },
-      { Header: "Name", accessor: "name", className: "fixed-column left" },
+      {
+        Header: "Date",
+        accessor: "date",
+        className: "fixed-column left-0",
+        Cell: ({ value }) => <span ref={dateColRef}>{value}</span>,
+      },
+      { Header: "Name", accessor: "name", className: "fixed-column left-1" },
       { Header: "Type", accessor: "type" },
       {
         Header: `Distance (${unitSystem === "metric" ? "km" : "mi"})`,
@@ -25,15 +42,17 @@ const ActivityTable = ({
             : (activity.distance / 1609.34).toFixed(2),
       },
       {
-        Header: `Moving Time (min)`,
+        Header: "Moving Time (min)",
         accessor: (activity) => (activity.movingTime / 60).toFixed(2),
       },
       {
-        Header: `Elapsed Time (min)`,
+        Header: "Elapsed Time (min)",
         accessor: (activity) => (activity.elapsedTime / 60).toFixed(2),
       },
       {
-        Header: `Total Elevation Gain (${unitSystem === "metric" ? "m" : "ft"})`,
+        Header: `Total Elevation Gain (${
+          unitSystem === "metric" ? "m" : "ft"
+        })`,
         accessor: (activity) => {
           const meters = Number(activity.totalElevationGainMeters) || 0;
           return unitSystem === "metric"
@@ -87,10 +106,7 @@ const ActivityTable = ({
 
       {activities.length > 0 && (
         <div className="table-container">
-          <table
-            {...getTableProps()}
-            style={{ width: "100%", borderCollapse: "collapse" }}
-          >
+          <table {...getTableProps()}>
             <thead>
               {headerGroups.map((headerGroup) => (
                 <tr {...headerGroup.getHeaderGroupProps()}>
@@ -98,7 +114,6 @@ const ActivityTable = ({
                     <th
                       {...column.getHeaderProps()}
                       className={column.className}
-                      style={{ border: "1px solid black", padding: "8px" }}
                     >
                       {column.render("Header")}
                     </th>
@@ -115,7 +130,6 @@ const ActivityTable = ({
                       <td
                         {...cell.getCellProps()}
                         className={cell.column.className}
-                        style={{ border: "1px solid black", padding: "8px" }}
                       >
                         {cell.render("Cell")}
                       </td>

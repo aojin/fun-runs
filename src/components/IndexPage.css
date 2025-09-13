@@ -1,17 +1,151 @@
-.profile-container {
+/* ──────────────────────────────
+   Header Row
+────────────────────────────── */
+.header-row {
   display: flex;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: baseline;      /* align to text baseline */
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.header-row .page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+  line-height: 1.2;
+}
+
+.strava-logo {
+  height: 1.6em;              /* match text height */
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;     /* align logo inline with text */
+  position: relative;
+  top: 0.1em;                 /* subtle tweak for perfect baseline alignment */
+}
+
+/* ──────────────────────────────
+   Profile Badge
+────────────────────────────── */
+/* Profile Badge */
+.profile-badge {
+  display: flex;
+  align-items: flex-start;   /* align top edges of image + info */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  max-width: 420px;
 }
 
 .profile-pic {
-  width: 50px;
-  height: 50px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  margin-right: 10px;
+  border: 2px solid #eee;
+  margin-top: 8px;
+  margin-right: 14px;
+  object-fit: cover;
 }
 
-.profile-details {
+/* Info block aligns to center of profile pic */
+.profile-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;   /* ✅ vertically center text inside pic height */
+  gap: 6px;
+  height: 64px;              /* match profile-pic height */
+}
+
+.profile-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.profile-status {
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.status-premium {
+  background: #ffe8d9;
+  color: #d35400;
+}
+
+.status-free {
+  background: #f2f2f2;
+  color: #555;
+}
+
+/* ──────────────────────────────
+   Instructions Box
+────────────────────────────── */
+.instructions-box {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin: 24px 0;
+  max-width: 640px;
+}
+
+.instructions-box h2 {
+  font-size: 1.25rem;
+  margin-bottom: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.instructions-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #444;
+}
+
+.instructions-box li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+/* ──────────────────────────────
+   Responsive Tweaks
+────────────────────────────── */
+@media (max-width: 600px) {
+  .header-row {
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .header-row .page-title {
+    font-size: 1.5rem;
+  }
+
+  .strava-logo {
+    height: 26px;
+  }
+
+  .profile-badge {
+    padding: 12px;
+  }
+
+  .profile-pic {
+    width: 52px;
+    height: 52px;
+    margin-right: 10px;
+  }
+
+  .profile-info {
+    flex-direction: column;   /* stack name + status on small screens */
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
