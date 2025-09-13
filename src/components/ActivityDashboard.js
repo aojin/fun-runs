@@ -117,7 +117,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
   const [page, setPage] = useState(1);
   const [unitSystem, setUnitSystem] = useState("imperial");
 
-  // Shared state for both desktop + mobile
+  // Shared state
   const [highlightedFeatureId, setHighlightedFeatureId] = useState(null);
   const [openAccordionIndex, setOpenAccordionIndex] = useState(null);
 
@@ -236,6 +236,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     cancelAll();
 
     (async () => {
+      const start = Date.now(); // track time
       try {
         const token = await getAccessToken();
         if (!mounted) return;
@@ -246,7 +247,11 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
           setError("Failed to load activities.");
         }
       } finally {
-        if (mounted) setInitLoading(false);
+        const elapsed = Date.now() - start;
+        const delay = Math.max(0, 400 - elapsed); // minimum 400ms skeleton
+        setTimeout(() => {
+          if (mounted) setInitLoading(false);
+        }, delay);
       }
     })();
 
@@ -313,6 +318,7 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
     setPage(1);
     cancelAll();
     (async () => {
+      const start = Date.now();
       try {
         const token = await getAccessToken();
         await fetchStravaData(1, token, true);
@@ -320,7 +326,9 @@ const ActivityDashboard = ({ accessToken: accessTokenProp }) => {
         console.error(err);
         setError("Failed to load activities.");
       } finally {
-        setInitLoading(false);
+        const elapsed = Date.now() - start;
+        const delay = Math.max(0, 400 - elapsed);
+        setTimeout(() => setInitLoading(false), delay);
       }
     })();
   }, [fetchStravaData, getAccessToken]);
