@@ -4,6 +4,7 @@ import Layout from "../components/layout"
 import axios from "axios"
 import "../components/index.css"
 import "../components/IndexPage.css"
+import stravaLogo from "../public/strava-logo.png";
 
 const IndexPage = () => {
   const [accessToken, setAccessToken] = useState(null)
@@ -60,7 +61,7 @@ const IndexPage = () => {
         {/* Header: My [Strava logo] Trails */}
         <div className="header-row">
           <h1 className="page-title">My</h1>
-          <img src="/strava-logo.png" alt="Strava Logo" className="strava-logo" />
+          <img src={stravaLogo} alt="Strava Logo" className="strava-logo" />
           <h1 className="page-title">Trails</h1>
         </div>
 
