@@ -4,6 +4,7 @@ import Layout from "../components/layout"
 import axios from "axios"
 import "../components/index.css"
 import "../components/IndexPage.css"
+import { StaticImage } from "gatsby-plugin-image"
 
 const IndexPage = () => {
   const [accessToken, setAccessToken] = useState(null)
@@ -45,10 +46,7 @@ const IndexPage = () => {
 
   useEffect(() => {
     fetchDefaultUserProfile()
-
-    // detect mobile vs desktop
-    const checkMobile = () =>
-      setIsMobile(/Mobi|Android/i.test(navigator.userAgent))
+    const checkMobile = () => setIsMobile(/Mobi|Android/i.test(navigator.userAgent))
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
@@ -60,7 +58,14 @@ const IndexPage = () => {
         {/* Header: My [Strava logo] Trails */}
         <div className="header-row">
           <h1 className="page-title">My</h1>
-          <img src="/strava-logo.png" alt="Strava Logo" className="strava-logo" />
+          <StaticImage
+            src="../images/strava-logo.png"
+            alt="Strava Logo"
+            className="strava-logo"
+            placeholder="none"
+            layout="fixed"
+            height={32}
+          />
           <h1 className="page-title">Trails</h1>
         </div>
 
